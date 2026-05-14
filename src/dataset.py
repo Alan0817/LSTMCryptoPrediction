@@ -4,7 +4,17 @@ from sklearn.preprocessing import StandardScaler
 import torch
 
 
+
 def create_sequences(features, targets, sequence_length=30):
+    """ Convert features and targets into sequences for LSTM input.
+    Args:
+        features (np.array): 2D array of shape (samples, features).
+        targets (np.array): 1D array of shape (samples,).
+        sequence_length (int): Number of time steps in each sequence.
+    Returns:
+        X (np.array): 3D array of shape (samples, sequence_length, features).
+        y (np.array): 1D array of shape (samples,).
+    """
     X = []
     y = []
 
@@ -15,6 +25,7 @@ def create_sequences(features, targets, sequence_length=30):
     return np.array(X), np.array(y)
 
 
+# Load the processed dataset
 df = pd.read_csv("data/btc_processed.csv", index_col=0)
 
 # Check the data
@@ -50,6 +61,7 @@ test_features = scaler.transform(test_df[FEATURES])
 train_targets = train_df[TARGET].values
 test_targets = test_df[TARGET].values
 
+# Set a sequence length of 30 days (1 month) for LSTM input
 SEQUENCE_LENGTH = 30
 
 X_train, y_train = create_sequences(
@@ -65,6 +77,7 @@ X_test, y_test = create_sequences(
 )
 
 # Check shapes
+# Train shapes: (samples, sequence_length, features)
 print(X_train.shape)
 print(y_train.shape)
 
