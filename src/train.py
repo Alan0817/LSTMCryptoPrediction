@@ -1,3 +1,5 @@
+import os
+from pathlib import Path
 import torch
 import torch.nn as nn
 from torch.utils.data import TensorDataset, DataLoader
@@ -5,7 +7,6 @@ from sklearn.metrics import accuracy_score, classification_report
 
 from model import LSTMClassifier
 from dataset import X_train, y_train, X_test, y_test
-
 
 
 # DataLoader parameters
@@ -72,6 +73,10 @@ for epoch in range(EPOCHS):
 
 # Evaluate on test set
 model.eval()
+
+# Save the model
+script_path = Path(__file__).resolve().parent
+torch.save(model, os.path.join(script_path, "model_weight/lstm_model.pth"))
 
 predictions = []
 actuals = []
