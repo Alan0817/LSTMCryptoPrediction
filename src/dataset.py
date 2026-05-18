@@ -32,6 +32,7 @@ df = pd.read_csv("data/btc_processed.csv", index_col=0)
 print(df.head())
 print(df.isnull().sum())
 print(df.dtypes)
+print(df['Target'].value_counts(normalize=True))
 
 # Define features and target
 FEATURES = [

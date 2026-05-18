@@ -9,7 +9,7 @@ from dataset import X_train, y_train, X_test, y_test
 
 
 # DataLoader parameters
-BATCH_SIZE = 32
+BATCH_SIZE = 64
 
 train_dataset = TensorDataset(X_train, y_train)
 test_dataset = TensorDataset(X_test, y_test)
@@ -41,7 +41,7 @@ optimizer = torch.optim.Adam(
 )
 
 # Start training
-EPOCHS = 20
+EPOCHS = 100
 
 for epoch in range(EPOCHS):
 

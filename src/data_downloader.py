@@ -40,7 +40,8 @@ df['Future_Return'] = df['Close'].pct_change().shift(-1)
 
 
 # Predict whether next-day return is positive
-df['Target'] = (df['Future_Return'] > 0).astype(int)
+threshold = 0.005
+df['Target'] = (df['Future_Return'] > threshold).astype(int)
 
 
 # Add technical indicators
