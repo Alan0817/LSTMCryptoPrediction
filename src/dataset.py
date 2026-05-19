@@ -29,9 +29,9 @@ def create_sequences(features, targets, sequence_length=30):
 df = pd.read_csv("data/btc_processed.csv", index_col=0)
 
 # Check the data
-print(df.head())
-print(df.isnull().sum())
-print(df.dtypes)
+# print(df.head())
+# print(df.isnull().sum())
+# print(df.dtypes)
 print(df['Target'].value_counts(normalize=True))
 
 # Define features and target
@@ -79,8 +79,8 @@ X_test, y_test = create_sequences(
 
 # Check shapes
 # Train shapes: (samples, sequence_length, features)
-print(X_train.shape)
-print(y_train.shape)
+# print(X_train.shape)
+# print(y_train.shape)
 
 X_train = torch.tensor(X_train, dtype=torch.float32)
 y_train = torch.tensor(y_train, dtype=torch.float32)
