@@ -1,6 +1,7 @@
 import os
 from pathlib import Path
 import numpy as np
+import pandas as pd
 import torch
 import torch.nn as nn
 from torch.utils.data import TensorDataset, DataLoader
@@ -66,17 +67,42 @@ with torch.no_grad():
         probs.extend(outputs.cpu().numpy())
 
 # Convert probabilities to binary signals
+# Buy / Cash signals: 1 = Buy, 0 = Cash
 signals = (np.array(probs) > 0.5).astype(int)
+
+# Long / Short signals: 1 = Long, -1 = Short
+signals = np.where(
+    np.array(probs) > 0.52,
+    1,
+    np.where(
+        np.array(probs) < 0.48,
+        -1,
+        0
+    )
+)
+
+# signals = pd.Series(signals).shift(1).fillna(0)
 print(np.unique(signals, return_counts=True))
 
 # Check the length of signals and test returns
 test_returns = test_df['Future_Return'].values[
     SEQUENCE_LENGTH:
 ]
+print("Signals length:", len(signals))
+print(test_df[['Close', 'Future_Return']].head(35))
 assert len(signals) == len(test_returns)
 
+
 # Calculate strategy returns
-strategy_returns = signals * test_returns
+# Buy / Cash signals: 1 = Buy, 0 = Cash
+strategy_returns = -signals * test_returns
+
+# Long / Short signals: 1 = Long, -1 = Short
+# strategy_returns = np.where(
+#     signals == 1,
+#     test_returns,
+#     -test_returns
+# )
 
 # Baseline buy-and-hold returns
 buy_hold_returns = test_returns
