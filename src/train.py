@@ -42,7 +42,7 @@ optimizer = torch.optim.Adam(
 )
 
 # Start training
-EPOCHS = 80
+EPOCHS = 100
 
 for epoch in range(EPOCHS):
 
