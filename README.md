@@ -51,3 +51,16 @@ Input Sequence (30 Days)
  ```
 
  ## Trading Strategy
+```
+Probability > 0.52 → Long
+Probability < 0.48 → Short
+Otherwise → Cash
+```
+
+## Result
+| Metric       | Strategy | Buy & Hold |
+| ------------ | -------- | ---------- |
+| Sharpe Ratio | 1.672    | 1.547      |
+| Max Drawdown | 0.306    | 0.262      |
+
+

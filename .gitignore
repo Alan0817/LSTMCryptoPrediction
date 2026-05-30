@@ -2,6 +2,4 @@
 *.log
 *.pt
 *.pth
-*.png
-*.jpg
 /.vscode/
