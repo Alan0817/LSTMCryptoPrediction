@@ -64,3 +64,10 @@ Otherwise → Cash
 | Max Drawdown | 0.306    | 0.262      |
 
 
+## Findings
+- Target engineering matters more than model complexity
+- Financial prediction is extremely noisy
+- Trading evaluation is more important than prediction accuracy
+
+# Results
+![Alt Text](src/plots/cumulative_comparison.png)
