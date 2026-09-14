@@ -1,162 +1,79 @@
-import os
-from pathlib import Path
+"""Backtest entry point built from reusable inference, strategy, metric, and plotting code."""
+
+from dataclasses import dataclass
+
 import numpy as np
-import pandas as pd
-import torch
-import torch.nn as nn
-from torch.utils.data import TensorDataset, DataLoader
-from sklearn.metrics import accuracy_score, classification_report
-import matplotlib.pyplot as plt
 
-from model import LSTMClassifier
-from dataset import X_test, y_test, test_df, SEQUENCE_LENGTH
+from config import DATA_PATH, PLOT_PATH, SEQUENCE_LENGTH
+from dataset import chronological_train_test_split, load_processed_data
+from plotting import plot_cumulative_comparison
+from prediction import predict_features
+from strategy import (
+    calculate_cumulative_returns,
+    calculate_strategy_returns,
+    max_drawdown,
+    sharpe_ratio,
+    trade_count,
+)
 
 
-def sharpe_ratio(returns, risk_free_rate=0):
+@dataclass
+class BacktestResult:
+    probabilities: np.ndarray
+    signals: np.ndarray
+    strategy_returns: np.ndarray
+    buy_hold_returns: np.ndarray
+    strategy_cumulative: np.ndarray
+    buy_hold_cumulative: np.ndarray
+    strategy_sharpe: float
+    buy_hold_sharpe: float
+    strategy_mdd: float
+    buy_hold_mdd: float
+    number_of_trades: int
 
-    excess_returns = returns - risk_free_rate
 
-    return (
-        np.mean(excess_returns)
-        / np.std(excess_returns)
-    ) * np.sqrt(252)
+def run_backtest(data_path=DATA_PATH, plot_path=PLOT_PATH):
+    """Run the original held-out-period backtest using the saved model artifact."""
+    data = load_processed_data(data_path)
+    _, test_df = chronological_train_test_split(data)
+    predictions = predict_features(test_df)
+    probabilities = predictions["probability_up"].to_numpy()
+    signals = predictions["signal"].to_numpy()
+    test_returns = test_df["Future_Return"].to_numpy()[SEQUENCE_LENGTH:]
+    if len(signals) != len(test_returns):
+        raise AssertionError("Signals and test returns must have equal length.")
 
-def max_drawdown(cumulative_returns):
-
-    running_max = np.maximum.accumulate(
-        cumulative_returns
+    # Intentionally retains the original inverted signal-return convention.
+    strategy_returns = calculate_strategy_returns(signals, test_returns)
+    buy_hold_returns = test_returns
+    strategy_cumulative = calculate_cumulative_returns(strategy_returns)
+    buy_hold_cumulative = calculate_cumulative_returns(buy_hold_returns)
+    result = BacktestResult(
+        probabilities=probabilities,
+        signals=signals,
+        strategy_returns=strategy_returns,
+        buy_hold_returns=buy_hold_returns,
+        strategy_cumulative=strategy_cumulative,
+        buy_hold_cumulative=buy_hold_cumulative,
+        strategy_sharpe=sharpe_ratio(strategy_returns),
+        buy_hold_sharpe=sharpe_ratio(buy_hold_returns),
+        strategy_mdd=max_drawdown(strategy_cumulative),
+        buy_hold_mdd=max_drawdown(buy_hold_cumulative),
+        number_of_trades=int(trade_count(signals)),
     )
-
-    drawdown = (
-        cumulative_returns - running_max
-    ) / running_max
-
-    return drawdown.min()
-
-# Load the trained model
-script_path = Path(__file__).resolve().parent
-model_path = os.path.join(script_path, "model_weight/lstm_model.pth")
-model = torch.load(model_path)
-model.eval()
-
-# Setup device and model
-device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-model.to(device)
-
-# DataLoader parameters
-BATCH_SIZE = 64
-
-test_dataset = TensorDataset(X_test, y_test)
-
-test_loader = DataLoader(
-    test_dataset,
-    batch_size=BATCH_SIZE,
-    shuffle=False
-)
-
-probs = []
-
-with torch.no_grad():
-
-    for X_batch, _ in test_loader:
-
-        X_batch = X_batch.to(device)
-
-        outputs = model(X_batch).squeeze()
-
-        probs.extend(outputs.cpu().numpy())
-
-# Convert probabilities to binary signals
-# Buy / Cash signals: 1 = Buy, 0 = Cash
-signals = (np.array(probs) > 0.5).astype(int)
-
-# Long / Short signals: 1 = Long, -1 = Short
-signals = np.where(
-    np.array(probs) > 0.52,
-    1,
-    np.where(
-        np.array(probs) < 0.48,
-        -1,
-        0
-    )
-)
-
-# signals = pd.Series(signals).shift(1).fillna(0)
-print(np.unique(signals, return_counts=True))
-
-# Check the length of signals and test returns
-test_returns = test_df['Future_Return'].values[
-    SEQUENCE_LENGTH:
-]
-print("Signals length:", len(signals))
-print(test_df[['Close', 'Future_Return']].head(35))
-assert len(signals) == len(test_returns)
+    plot_cumulative_comparison(strategy_cumulative, buy_hold_cumulative, plot_path)
+    return result
 
 
-# Calculate strategy returns
-# Buy / Cash signals: 1 = Buy, 0 = Cash
-strategy_returns = -signals * test_returns
+def main():
+    result = run_backtest()
+    print(np.unique(result.signals, return_counts=True))
+    print("Strategy Sharpe:", result.strategy_sharpe)
+    print("Buy & Hold Sharpe:", result.buy_hold_sharpe)
+    print("Strategy MDD:", result.strategy_mdd)
+    print("Buy & Hold MDD:", result.buy_hold_mdd)
+    print("Number of trades:", result.number_of_trades)
 
-# Long / Short signals: 1 = Long, -1 = Short
-# strategy_returns = np.where(
-#     signals == 1,
-#     test_returns,
-#     -test_returns
-# )
 
-# Baseline buy-and-hold returns
-buy_hold_returns = test_returns
-
-# Cumulative returns
-strategy_cumulative = (
-    1 + strategy_returns
-).cumprod()
-
-buy_hold_cumulative = (
-    1 + buy_hold_returns
-).cumprod()
-
-strategy_sharpe = sharpe_ratio(strategy_returns)
-buy_hold_sharpe = sharpe_ratio(buy_hold_returns)
-
-print("Strategy Sharpe:", strategy_sharpe)
-print("Buy & Hold Sharpe:", buy_hold_sharpe)
-
-# Calculate max drawdown
-strategy_mdd = max_drawdown(
-    strategy_cumulative
-)
-
-buy_hold_mdd = max_drawdown(
-    buy_hold_cumulative
-)
-
-print("Strategy MDD:", strategy_mdd)
-print("Buy & Hold MDD:", buy_hold_mdd)
-
-# Visualize cumulative returns
-plt.figure(figsize=(12, 6))
-
-plt.plot(
-    strategy_cumulative,
-    label='LSTM Strategy'
-)
-
-plt.plot(
-    buy_hold_cumulative,
-    label='Buy & Hold'
-)
-
-plt.legend()
-
-plt.title('Strategy Backtest')
-
-plt.xlabel('Time')
-plt.ylabel('Portfolio Value')
-
-plt.savefig(os.path.join(script_path, "plots/cumulative_comparison.png"))
-
-# Trading counts
-num_trades = np.sum(np.abs(np.diff(signals)))
-
-print("Number of trades:", num_trades)
+if __name__ == "__main__":
+    main()

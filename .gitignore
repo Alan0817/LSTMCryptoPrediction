@@ -3,3 +3,6 @@
 *.pt
 *.pth
 /.vscode/
+.venv/
+__pycache__/
+*.pyc
