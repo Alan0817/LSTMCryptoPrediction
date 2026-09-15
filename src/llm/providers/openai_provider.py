@@ -34,3 +34,7 @@ class OpenAIProvider:
         if not isinstance(text, str) or not text.strip():
             raise RuntimeError("OpenAI returned a response without text output.")
         return text
+
+    def generate_with_tools(self, *args, **kwargs) -> str:
+        """Reject tool-enabled generation until an OpenAI-specific adapter exists."""
+        raise NotImplementedError("Tool-enabled generation is not supported for the OpenAI provider.")

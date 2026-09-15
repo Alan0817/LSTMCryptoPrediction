@@ -120,5 +120,27 @@ tool request concise. Technical-analysis and LSTM tools remain direct Python
 adapters because they require DataFrames and controlled model dependencies that
 should not be supplied by an LLM.
 
+## Gemini Tool Calling
+Gemini tool calling uses the official stateful `interactions.create` manual
+function-call loop. Gemini selects from provider-neutral registry schemas, but
+the application validates and executes every request through `ToolRegistry`.
+OpenAI tool calling is not implemented yet.
+
+```text
+Gemini interaction -> ToolRegistry.execute -> JSON function result -> Gemini final text
+```
+
+```python
+from llm.client import LLMClient
+from tools.registry import ToolRegistry
+
+trace = []
+answer = LLMClient(provider="gemini").generate_with_tools(
+    "Calculate risk metrics for [0.01, -0.005, 0.02]. Use a tool.",
+    ToolRegistry(),
+    trace=trace,
+)
+```
+
 # Results
 ![Alt Text](src/plots/cumulative_comparison.png)

@@ -37,3 +37,20 @@ class LLMClient:
     def generate(self, prompt: str, system_prompt: str | None = None) -> str:
         """Generate text without tools, retrieval, or conversation state."""
         return self._provider.generate(prompt, system_prompt)
+
+    def generate_with_tools(
+        self,
+        prompt: str,
+        registry,
+        system_prompt: str | None = None,
+        max_tool_rounds: int = 5,
+        trace: list[dict] | None = None,
+    ) -> str:
+        """Generate text with provider-supported registry tool execution."""
+        return self._provider.generate_with_tools(
+            prompt,
+            registry,
+            system_prompt=system_prompt,
+            max_tool_rounds=max_tool_rounds,
+            trace=trace,
+        )
