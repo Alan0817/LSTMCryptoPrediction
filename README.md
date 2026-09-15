@@ -168,5 +168,41 @@ status. `probability_up` remains `P(Target = 1)`, where Target is 1 only when
 `Future_Return > 0.005`; its raw signal is not trading exposure. Results are
 model outputs, not investment recommendations.
 
+## FinancialAnalysisAgent
+`FinancialAnalysisAgent` is a thin application layer for natural-language
+financial-analysis requests. It delegates reasoning and tool selection to a
+tool-capable LLM client, while all quantitative work remains in deterministic
+tools behind `ToolRegistry`.
+
+```text
+User
+  |
+FinancialAnalysisAgent
+  |
+LLMClient
+  |
+Gemini
+  |
+ToolRegistry
+  |
+analyze_market
+  |
+deterministic financial pipeline
+```
+
+```python
+from agent.financial_agent import FinancialAnalysisAgent
+from llm.client import LLMClient
+from tools.registry import ToolRegistry
+
+agent = FinancialAnalysisAgent(LLMClient(provider="gemini"), ToolRegistry())
+result = agent.run("Analyze BTC-USD from 2024-09-01 to 2024-12-01.")
+print(result.to_dict())
+```
+
+`FinancialAnalysisResult` contains the final answer, unique tool names derived
+from actual trace events, the trace itself, and structured limitations reported
+by completed tools. OpenAI tool-enabled generation is not implemented yet.
+
 # Results
 ![Alt Text](src/plots/cumulative_comparison.png)

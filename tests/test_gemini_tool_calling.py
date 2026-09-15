@@ -80,6 +80,7 @@ def test_gemini_executes_registry_tool_and_returns_final_text():
     assert function_result["name"] == "get_risk_metrics"
     assert '"sharpe_ratio": 1.2' in function_result["result"][0]["text"]
     assert [event["event"] for event in trace] == ["tool_requested", "tool_completed", "final_response"]
+    assert trace[1]["result"] == {"observations": 3, "sharpe_ratio": 1.2}
 
 
 def test_gemini_market_data_request_executes_through_registry():

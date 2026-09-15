@@ -84,7 +84,9 @@ class GeminiProvider:
                 arguments = getattr(call, "arguments", None)
                 _append_trace(trace, {"event": "tool_requested", "name": name, "arguments": arguments})
                 result = registry.execute(name, arguments)
-                _append_trace(trace, {"event": "tool_completed", "name": name})
+                # Registry results are JSON-safe, so a caller can inspect structured
+                # limitations without trying to infer them from the model's prose.
+                _append_trace(trace, {"event": "tool_completed", "name": name, "result": result})
                 function_results.append(
                     {
                         "type": "function_result",
