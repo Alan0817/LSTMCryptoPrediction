@@ -1,7 +1,9 @@
 import numpy as np
 
 from strategy import (
+    calculate_documented_strategy_returns,
     calculate_strategy_returns,
+    contrarian_exposure,
     max_drawdown,
     sharpe_ratio,
     trade_count,
@@ -29,10 +31,20 @@ def test_trade_count_is_total_absolute_position_change():
 
 
 def test_strategy_return_sign_convention_is_intentionally_preserved():
-    """A +1 signal currently receives the negative market return; do not silently fix it."""
+    """Raw labels map to contrarian exposure; do not silently change this."""
+    raw_signals = np.array([1, -1, 0])
+    market_returns = np.array([0.10, 0.20, 0.30])
+    assert np.array_equal(contrarian_exposure(raw_signals), np.array([-1, 1, 0]))
+    assert np.allclose(
+        calculate_strategy_returns(raw_signals, market_returns),
+        np.array([-0.10, 0.20, 0.0]),
+    )
+
+
+def test_documented_long_short_semantics_are_the_opposite_of_current_convention():
     signals = np.array([1, -1, 0])
     market_returns = np.array([0.10, 0.20, 0.30])
     assert np.allclose(
-        calculate_strategy_returns(signals, market_returns),
-        np.array([-0.10, 0.20, 0.0]),
+        calculate_documented_strategy_returns(signals, market_returns),
+        np.array([0.10, -0.20, 0.0]),
     )

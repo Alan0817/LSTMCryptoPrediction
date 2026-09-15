@@ -8,11 +8,13 @@ from dataset import create_feature_sequences
 from strategy import generate_signals
 
 
-def predict_features(feature_data, artifact_path=None, device=None):
-    """Return probability, 0.5 prediction, and current trading signal for each sequence.
+def predict_features(feature_data, artifact_path=None, device=None, historical_context=None):
+    """Return ``P(Target=1)``, a 0.5 prediction, and a raw threshold label.
 
     ``feature_data`` must already contain the artifact's engineered feature columns.
-    Results begin after the artifact's lookback window, matching training alignment.
+    The returned ``signal`` column is a raw label, not a trading exposure; the
+    frozen backtest converts it to contrarian exposure separately. Results begin
+    after the artifact's lookback window unless historical context is supplied.
     """
     if not isinstance(feature_data, pd.DataFrame):
         raise TypeError("feature_data must be a pandas DataFrame.")
@@ -26,12 +28,28 @@ def predict_features(feature_data, artifact_path=None, device=None):
     features = feature_data.loc[:, list(loaded.feature_columns)]
     if features.isnull().any().any():
         raise ValueError("Feature data contains missing feature values.")
-    scaled_features = loaded.scaler.transform(features)
+    if historical_context is not None:
+        context_features = historical_context.loc[:, list(loaded.feature_columns)]
+        if context_features.isnull().any().any():
+            raise ValueError("Historical context contains missing feature values.")
+        if len(context_features) < loaded.sequence_length:
+            raise ValueError("Historical context is shorter than the sequence length.")
+        features_for_sequences = pd.concat(
+            [context_features.tail(loaded.sequence_length), features]
+        )
+    else:
+        features_for_sequences = features
+    scaled_features = loaded.scaler.transform(features_for_sequences)
     sequences = create_feature_sequences(scaled_features, loaded.sequence_length)
+    if historical_context is not None:
+        sequences = sequences[-len(features):]
+        output_index = feature_data.index
+    else:
+        output_index = feature_data.index[loaded.sequence_length:]
     if len(sequences) == 0:
         return pd.DataFrame(
             columns=["probability_up", "prediction", "signal"],
-            index=feature_data.index[loaded.sequence_length:],
+            index=output_index,
         )
     device = next(loaded.model.parameters()).device
     with torch.no_grad():
@@ -49,5 +67,5 @@ def predict_features(feature_data, artifact_path=None, device=None):
             "prediction": (probabilities > 0.5).astype(int),
             "signal": signals,
         },
-        index=feature_data.index[loaded.sequence_length:],
+        index=output_index,
     )

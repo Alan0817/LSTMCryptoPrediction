@@ -70,6 +70,34 @@ def create_feature_sequences(features, sequence_length=SEQUENCE_LENGTH):
     return sequences
 
 
+def create_test_sequences_with_train_context(
+    train_features,
+    test_features,
+    test_targets,
+    sequence_length=SEQUENCE_LENGTH,
+):
+    """Create one test sequence per test target using the training-period tail.
+
+    This is an opt-in correction for evaluation. The default preparation path is
+    intentionally unchanged so historical backtest results remain reproducible.
+    """
+    train_features = np.asarray(train_features)
+    test_features = np.asarray(test_features)
+    test_targets = np.asarray(test_targets)
+    if len(train_features) < sequence_length:
+        raise ValueError("Training features are shorter than the sequence length.")
+    if len(test_features) != len(test_targets):
+        raise ValueError("test_features and test_targets must have the same length.")
+    contextual_features = np.concatenate(
+        (train_features[-sequence_length:], test_features), axis=0
+    )
+    sequences = [
+        contextual_features[index:index + sequence_length]
+        for index in range(len(test_features))
+    ]
+    return np.asarray(sequences), test_targets.copy()
+
+
 def prepare_datasets(
     data,
     feature_columns=FEATURE_COLUMNS,

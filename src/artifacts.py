@@ -42,7 +42,7 @@ def default_model_metadata():
     }
 
 
-def _serialize_scaler(scaler):
+def _serialize_scaler(scaler, feature_columns):
     """Store fitted scaler numbers, not a pickleable sklearn object."""
     required = ("mean_", "scale_", "var_", "n_features_in_")
     missing = [name for name in required if not hasattr(scaler, name)]
@@ -54,16 +54,19 @@ def _serialize_scaler(scaler):
         "var": scaler.var_.tolist(),
         "n_features_in": int(scaler.n_features_in_),
         "n_samples_seen": int(scaler.n_samples_seen_),
+        "feature_names_in": list(getattr(scaler, "feature_names_in_", feature_columns)),
     }
 
 
-def _deserialize_scaler(state):
+def _deserialize_scaler(state, feature_columns):
     scaler = StandardScaler()
     scaler.mean_ = np.asarray(state["mean"], dtype=float)
     scaler.scale_ = np.asarray(state["scale"], dtype=float)
     scaler.var_ = np.asarray(state["var"], dtype=float)
     scaler.n_features_in_ = int(state["n_features_in"])
     scaler.n_samples_seen_ = int(state["n_samples_seen"])
+    # This restores sklearn's validation metadata only; it does not alter values.
+    scaler.feature_names_in_ = np.asarray(state.get("feature_names_in", feature_columns), dtype=object)
     return scaler
 
 
@@ -84,7 +87,7 @@ def save_model_artifact(
     artifact = {
         "format_version": 1,
         "model_state_dict": model.state_dict(),
-        "scaler_state": _serialize_scaler(scaler),
+        "scaler_state": _serialize_scaler(scaler, feature_columns),
         "feature_columns": list(feature_columns),
         "sequence_length": sequence_length,
         "upper_signal_threshold": upper_signal_threshold,
@@ -126,7 +129,7 @@ def load_model_artifact(artifact_path=MODEL_PATH, device=None):
     model.eval()
     return LoadedModelArtifact(
         model=model,
-        scaler=_deserialize_scaler(artifact["scaler_state"]),
+        scaler=_deserialize_scaler(artifact["scaler_state"], artifact["feature_columns"]),
         feature_columns=tuple(artifact["feature_columns"]),
         sequence_length=artifact["sequence_length"],
         upper_signal_threshold=artifact["upper_signal_threshold"],

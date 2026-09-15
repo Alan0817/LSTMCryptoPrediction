@@ -10,6 +10,7 @@ from plotting import plot_cumulative_comparison
 from prediction import predict_features
 from strategy import (
     calculate_cumulative_returns,
+    calculate_documented_strategy_returns,
     calculate_strategy_returns,
     max_drawdown,
     sharpe_ratio,
@@ -33,22 +34,57 @@ class BacktestResult:
 
 
 def run_backtest(data_path=DATA_PATH, plot_path=PLOT_PATH):
-    """Run the original held-out-period backtest using the saved model artifact."""
+    """Run the frozen held-out backtest using contrarian exposure from raw labels."""
     data = load_processed_data(data_path)
     _, test_df = chronological_train_test_split(data)
     predictions = predict_features(test_df)
     probabilities = predictions["probability_up"].to_numpy()
-    signals = predictions["signal"].to_numpy()
+    raw_signals = predictions["signal"].to_numpy()
     test_returns = test_df["Future_Return"].to_numpy()[SEQUENCE_LENGTH:]
-    if len(signals) != len(test_returns):
+    if len(raw_signals) != len(test_returns):
         raise AssertionError("Signals and test returns must have equal length.")
 
-    # Intentionally retains the original inverted signal-return convention.
-    strategy_returns = calculate_strategy_returns(signals, test_returns)
+    # Raw threshold labels are converted to contrarian exposure inside the helper.
+    strategy_returns = calculate_strategy_returns(raw_signals, test_returns)
     buy_hold_returns = test_returns
     strategy_cumulative = calculate_cumulative_returns(strategy_returns)
     buy_hold_cumulative = calculate_cumulative_returns(buy_hold_returns)
     result = BacktestResult(
+        probabilities=probabilities,
+        signals=raw_signals,
+        strategy_returns=strategy_returns,
+        buy_hold_returns=buy_hold_returns,
+        strategy_cumulative=strategy_cumulative,
+        buy_hold_cumulative=buy_hold_cumulative,
+        strategy_sharpe=sharpe_ratio(strategy_returns),
+        buy_hold_sharpe=sharpe_ratio(buy_hold_returns),
+        strategy_mdd=max_drawdown(strategy_cumulative),
+        buy_hold_mdd=max_drawdown(buy_hold_cumulative),
+        number_of_trades=int(trade_count(raw_signals)),
+    )
+    plot_cumulative_comparison(strategy_cumulative, buy_hold_cumulative, plot_path)
+    return result
+
+
+def run_corrected_backtest_candidate(data_path=DATA_PATH):
+    """Evaluate documented signal semantics with train-tail test context.
+
+    This audit-only candidate does not replace ``run_backtest`` or write the
+    standard plot. It uses all test targets and applies +1 as long, -1 as short.
+    """
+    data = load_processed_data(data_path)
+    train_df, test_df = chronological_train_test_split(data)
+    predictions = predict_features(test_df, historical_context=train_df)
+    probabilities = predictions["probability_up"].to_numpy()
+    signals = predictions["signal"].to_numpy()
+    test_returns = test_df["Future_Return"].to_numpy()
+    if len(signals) != len(test_returns):
+        raise AssertionError("Signals and test returns must have equal length.")
+    strategy_returns = calculate_documented_strategy_returns(signals, test_returns)
+    buy_hold_returns = test_returns
+    strategy_cumulative = calculate_cumulative_returns(strategy_returns)
+    buy_hold_cumulative = calculate_cumulative_returns(buy_hold_returns)
+    return BacktestResult(
         probabilities=probabilities,
         signals=signals,
         strategy_returns=strategy_returns,
@@ -61,8 +97,6 @@ def run_backtest(data_path=DATA_PATH, plot_path=PLOT_PATH):
         buy_hold_mdd=max_drawdown(buy_hold_cumulative),
         number_of_trades=int(trade_count(signals)),
     )
-    plot_cumulative_comparison(strategy_cumulative, buy_hold_cumulative, plot_path)
-    return result
 
 
 def main():

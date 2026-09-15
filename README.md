@@ -1,7 +1,7 @@
 # LSTM-based Bitcoin Trading Strategy
 
 ## Overview
-This project explores whether deep learning models (i.e. LSTM) can extract predictive information from historical Bitcoin market data and convert these predictions into profitable trading signals.
+This project explores whether an LSTM can extract predictive information from historical Bitcoin market data and evaluates the resulting threshold-based backtest.
 
 ### Project Workflow
 ```
@@ -50,12 +50,23 @@ Input Sequence (30 Days)
  Upward Probability
  ```
 
- ## Trading Strategy
+## Trading Semantics
 ```
-Probability > 0.52 → Long
-Probability < 0.48 → Short
-Otherwise → Cash
+Model output: probability of Target = 1
+
+Probability > 0.52 → raw threshold label +1
+Probability < 0.48 → raw threshold label -1
+Otherwise → raw threshold label 0
+
+Frozen backtest exposure = -raw threshold label
+Raw +1 → exposure -1
+Raw -1 → exposure +1
+Raw 0 → exposure 0
 ```
+
+The threshold label is not itself a long or short position. The current
+backtest intentionally applies contrarian exposure and calculates returns as
+`exposure * next-day market return`.
 
 ## Result
 | Metric       | Strategy | Buy & Hold |
@@ -68,6 +79,12 @@ Otherwise → Cash
 - Target engineering matters more than model complexity
 - Financial prediction is extremely noisy
 - Trading evaluation is more important than prediction accuracy
+
+## Known Limitations
+- Evaluation uses one fixed holdout period rather than walk-forward validation.
+- Backtest returns exclude transaction costs and slippage.
+- Reported performance does not establish that the strategy is profitable or deployable.
+- Sharpe annualization uses `sqrt(252)` even though BTC trades daily.
 
 # Results
 ![Alt Text](src/plots/cumulative_comparison.png)

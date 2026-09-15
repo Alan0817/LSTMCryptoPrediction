@@ -3,7 +3,11 @@ import pandas as pd
 
 from config import FEATURE_COLUMNS
 from data_processing import add_target
-from dataset import chronological_train_test_split, create_sequences
+from dataset import (
+    chronological_train_test_split,
+    create_sequences,
+    create_test_sequences_with_train_context,
+)
 
 
 def test_expected_model_feature_columns_are_stable():
@@ -33,3 +37,25 @@ def test_sequence_shape_and_target_alignment():
     assert sequences.shape == (7, 3, 2)
     assert sequences[0].tolist() == features[:3].tolist()
     assert sequence_targets.tolist() == list(range(3, 10))
+
+
+def test_sequence_target_uses_only_observations_before_its_target_date():
+    features = np.arange(6).reshape(6, 1)
+    targets = np.arange(100, 106)
+    sequences, sequence_targets = create_sequences(features, targets, sequence_length=3)
+    # The first target corresponds to index 3, while the final input is index 2.
+    assert sequences[0, :, 0].tolist() == [0, 1, 2]
+    assert sequence_targets[0] == 103
+
+
+def test_train_context_makes_all_test_targets_evaluable():
+    train_features = np.arange(6).reshape(6, 1)
+    test_features = np.arange(6, 8).reshape(2, 1)
+    test_targets = np.array([106, 107])
+    sequences, targets = create_test_sequences_with_train_context(
+        train_features, test_features, test_targets, sequence_length=3
+    )
+    assert sequences.shape == (2, 3, 1)
+    assert sequences[0, :, 0].tolist() == [3, 4, 5]
+    assert sequences[1, :, 0].tolist() == [4, 5, 6]
+    assert targets.tolist() == [106, 107]

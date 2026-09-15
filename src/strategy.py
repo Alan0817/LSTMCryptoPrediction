@@ -10,7 +10,12 @@ def generate_signals(
     upper_threshold=UPPER_SIGNAL_THRESHOLD,
     lower_threshold=LOWER_SIGNAL_THRESHOLD,
 ):
-    """Map probabilities to the existing long/short/cash signal values."""
+    """Map ``P(Target=1)`` to raw threshold labels, not trading exposure.
+
+    A raw value of +1 means the probability exceeds the upper threshold, -1
+    means it is below the lower threshold, and 0 is neutral. The current
+    backtest converts these labels to contrarian exposure separately.
+    """
     probabilities = np.asarray(probabilities)
     return np.where(
         probabilities > upper_threshold,
@@ -19,17 +24,40 @@ def generate_signals(
     )
 
 
-def calculate_strategy_returns(signals, market_returns):
-    """Calculate returns using the project's current, intentionally preserved convention.
+def contrarian_exposure(raw_signals):
+    """Convert raw threshold labels to the current backtest's exposure.
 
-    TODO: Review the sign convention as a separate trading-logic change.  At
-    present a +1 signal is multiplied by -1, matching the original backtest.
+    The frozen convention maps raw +1 to -1 exposure and raw -1 to +1
+    exposure. A zero raw signal remains flat.
+    """
+    return -np.asarray(raw_signals)
+
+
+def calculate_strategy_returns(raw_signals, market_returns):
+    """Calculate returns from raw labels using the frozen contrarian exposure.
+
+    ``raw_signals`` are threshold labels derived from model probabilities;
+    they are not long/short positions. The resulting trading exposure is
+    ``contrarian_exposure(raw_signals)`` before multiplying market returns.
+    """
+    raw_signals = np.asarray(raw_signals)
+    market_returns = np.asarray(market_returns)
+    if len(raw_signals) != len(market_returns):
+        raise ValueError("Signals and market returns must have the same length.")
+    return contrarian_exposure(raw_signals) * market_returns
+
+
+def calculate_documented_strategy_returns(signals, market_returns):
+    """Candidate correction matching the documented +1 long / -1 short semantics.
+
+    This is deliberately separate from ``calculate_strategy_returns`` so the
+    existing reported backtest remains unchanged during the audit.
     """
     signals = np.asarray(signals)
     market_returns = np.asarray(market_returns)
     if len(signals) != len(market_returns):
         raise ValueError("Signals and market returns must have the same length.")
-    return -signals * market_returns
+    return signals * market_returns
 
 
 def calculate_cumulative_returns(returns):
