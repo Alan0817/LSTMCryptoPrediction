@@ -58,7 +58,7 @@ class GeminiProvider:
         tools = [_to_gemini_tool_definition(tool) for tool in registry.list_tools()]
         current_input = prompt
         previous_interaction_id = None
-        for _ in range(max_tool_rounds):
+        for round_number in range(1, max_tool_rounds + 1):
             request = {
                 "model": self.model,
                 "input": current_input,
@@ -82,11 +82,17 @@ class GeminiProvider:
             for call in function_calls:
                 name = getattr(call, "name", None)
                 arguments = getattr(call, "arguments", None)
-                _append_trace(trace, {"event": "tool_requested", "name": name, "arguments": arguments})
+                _append_trace(
+                    trace,
+                    {"event": "tool_requested", "name": name, "arguments": arguments, "round": round_number},
+                )
                 result = registry.execute(name, arguments)
                 # Registry results are JSON-safe, so a caller can inspect structured
                 # limitations without trying to infer them from the model's prose.
-                _append_trace(trace, {"event": "tool_completed", "name": name, "result": result})
+                _append_trace(
+                    trace,
+                    {"event": "tool_completed", "name": name, "result": result, "round": round_number},
+                )
                 function_results.append(
                     {
                         "type": "function_result",

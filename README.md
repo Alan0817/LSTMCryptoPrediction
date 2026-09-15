@@ -204,5 +204,36 @@ print(result.to_dict())
 from actual trace events, the trace itself, and structured limitations reported
 by completed tools. OpenAI tool-enabled generation is not implemented yet.
 
+## Agent Evaluation And Architecture Audit
+The offline `evaluation` package contains eight representative agent cases for
+conceptual questions, market analysis, risk metrics, market data, unsupported
+LSTM symbols, unavailable data capabilities, and recommendation-style requests.
+It measures trace-derived required-tool recall, forbidden and extra calls,
+unnecessary calls, exact duplicate requests, call/round counts, and structured
+limitation preservation. It deliberately does not score natural-language
+quality, factual prose, or investment advice with an LLM.
+
+The observed `analyze_market -> get_market_data` pattern is represented as an
+allowed but extra call in the full-analysis case. This records possible
+redundancy without preventing a provider from requesting additional evidence.
+Captured results can be evaluated offline later for Gemini or OpenAI:
+
+```bash
+PYTHONPATH=src python -m evaluation.agent_evaluator captured_results.json
+```
+
+Current traces include requested tool names and arguments, completed tool
+results, and round numbers. Results are JSON-safe, but full tool results can
+grow with payload size; a future trace design may split execution metadata,
+structured evidence, and debug payloads. The agent needs the current structured
+results to preserve deterministic limitations.
+
+### Phase 2.7 Readiness
+`FinancialAnalysisAgent` depends only on the provider-neutral `LLMClient`
+interface and `ToolRegistry`; no Gemini types leak into the agent or registry.
+OpenAI tool calling can therefore add an OpenAI provider adapter that translates
+the existing tool definitions, executes requests through `ToolRegistry`, and
+emits the same trace event contract. It is not implemented in this phase.
+
 # Results
 ![Alt Text](src/plots/cumulative_comparison.png)
