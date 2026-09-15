@@ -86,5 +86,27 @@ backtest intentionally applies contrarian exposure and calculates returns as
 - Reported performance does not establish that the strategy is profitable or deployable.
 - Sharpe annualization uses `sqrt(252)` even though BTC trades daily.
 
+## LLM Client
+The isolated LLM client reads `LLM_PROVIDER`, `LLM_MODEL`, and provider API
+keys from the environment or local `.env` file. It supports `openai` and
+`gemini`, and is not called by the LSTM, trading, or backtest pipeline.
+
+```bash
+python -c "from src.llm.client import LLMClient; print(LLMClient(provider='gemini').generate('Explain RSI in one sentence.'))"
+```
+
+## Deterministic Financial Tools
+The `tools` package exposes JSON-safe, directly callable adapters for market
+data, project-defined technical indicators, LSTM inference, and risk metrics.
+They do not call an LLM; LLM tool calling is planned for a later phase.
+
+```python
+from tools.risk_metrics import get_risk_metrics
+
+print(get_risk_metrics([0.01, -0.005, 0.02]))
+```
+
+Run direct examples with `PYTHONPATH=src` in this script-style project.
+
 # Results
 ![Alt Text](src/plots/cumulative_comparison.png)
