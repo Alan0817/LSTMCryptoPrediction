@@ -39,3 +39,27 @@ RISK_METRICS_PARAMETERS = {
     "required": ["returns"],
     "additionalProperties": False,
 }
+
+
+MARKET_ANALYSIS_PARAMETERS = {
+    "type": "object",
+    "properties": {
+        "symbol": {
+            "type": "string",
+            "description": "Market ticker symbol, for example BTC-USD.",
+            "minLength": 1,
+        },
+        "start_date": {
+            "type": "string",
+            "format": "date",
+            "description": "Inclusive requested start date in YYYY-MM-DD format.",
+        },
+        "end_date": {
+            "type": "string",
+            "format": "date",
+            "description": "Exclusive requested end date in YYYY-MM-DD format.",
+        },
+    },
+    "required": ["symbol", "start_date", "end_date"],
+    "additionalProperties": False,
+}

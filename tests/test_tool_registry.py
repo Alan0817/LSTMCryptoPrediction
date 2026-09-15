@@ -25,7 +25,11 @@ def make_ohlcv(rows=4):
 def test_registry_lists_and_looks_up_exposed_tools():
     registry = ToolRegistry()
 
-    assert [tool.name for tool in registry.list_tools()] == ["get_market_data", "get_risk_metrics"]
+    assert [tool.name for tool in registry.list_tools()] == [
+        "get_market_data",
+        "get_risk_metrics",
+        "analyze_market",
+    ]
     assert registry.get("get_market_data").name == "get_market_data"
 
 
@@ -88,14 +92,17 @@ def test_schemas_expose_only_agent_facing_arguments_and_are_provider_neutral():
     definitions = [tool.as_dict() for tool in ToolRegistry().list_tools()]
     market_schema = next(tool["parameters"] for tool in definitions if tool["name"] == "get_market_data")
     risk_schema = next(tool["parameters"] for tool in definitions if tool["name"] == "get_risk_metrics")
+    analysis_schema = next(tool["parameters"] for tool in definitions if tool["name"] == "analyze_market")
     schema_text = json.dumps(definitions).lower()
 
     assert set(market_schema["properties"]) == {"symbol", "start_date", "end_date"}
     assert set(risk_schema["properties"]) == {"returns"}
+    assert set(analysis_schema["properties"]) == {"symbol", "start_date", "end_date"}
     assert "downloader" not in schema_text
     assert "predictor" not in schema_text
     assert "artifact_path" not in schema_text
     assert "historical_context" not in schema_text
+    assert "market_analysis_predictor" not in schema_text
     assert "dataframe" not in schema_text
     assert "openai" not in schema_text
     assert "gemini" not in schema_text

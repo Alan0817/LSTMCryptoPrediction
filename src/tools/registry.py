@@ -6,8 +6,9 @@ import math
 from typing import Callable
 
 from .market_data import get_market_data
+from .market_analysis import analyze_market
 from .risk_metrics import get_risk_metrics
-from .schemas import MARKET_DATA_PARAMETERS, RISK_METRICS_PARAMETERS
+from .schemas import MARKET_ANALYSIS_PARAMETERS, MARKET_DATA_PARAMETERS, RISK_METRICS_PARAMETERS
 
 
 @dataclass(frozen=True)
@@ -36,8 +37,15 @@ class ToolRegistry:
     an LLM-facing schema.
     """
 
-    def __init__(self, market_data_downloader=None):
+    def __init__(
+        self,
+        market_data_downloader=None,
+        market_analysis_predictor=None,
+        market_analysis_artifact_path=None,
+    ):
         self._market_data_downloader = market_data_downloader
+        self._market_analysis_predictor = market_analysis_predictor
+        self._market_analysis_artifact_path = market_analysis_artifact_path
         self._tools = {
             "get_market_data": ToolDefinition(
                 name="get_market_data",
@@ -50,6 +58,12 @@ class ToolRegistry:
                 description="Calculate risk and performance metrics from a concise list of daily returns.",
                 parameters_schema=RISK_METRICS_PARAMETERS,
                 handler=get_risk_metrics,
+            ),
+            "analyze_market": ToolDefinition(
+                name="analyze_market",
+                description="Create a compact market, technical, LSTM, and risk analysis for one ticker and date range.",
+                parameters_schema=MARKET_ANALYSIS_PARAMETERS,
+                handler=self._execute_market_analysis,
             ),
         }
 
@@ -79,6 +93,16 @@ class ToolRegistry:
         if self._market_data_downloader is None:
             return get_market_data(**arguments)
         return get_market_data(**arguments, downloader=self._market_data_downloader)
+
+    def _execute_market_analysis(self, **arguments) -> dict:
+        dependencies = {}
+        if self._market_data_downloader is not None:
+            dependencies["downloader"] = self._market_data_downloader
+        if self._market_analysis_predictor is not None:
+            dependencies["predictor"] = self._market_analysis_predictor
+        if self._market_analysis_artifact_path is not None:
+            dependencies["artifact_path"] = self._market_analysis_artifact_path
+        return analyze_market(**arguments, **dependencies)
 
 
 def _validate_arguments(schema: dict, arguments: dict) -> None:

@@ -11,7 +11,8 @@ def _iso_timestamp(value):
     return pd.Timestamp(value).isoformat()
 
 
-def _validate_date_range(start_date, end_date):
+def validate_date_range(start_date, end_date):
+    """Validate and normalize a requested date range for market-data adapters."""
     try:
         start = pd.Timestamp(start_date)
         end = pd.Timestamp(end_date)
@@ -31,7 +32,7 @@ def get_market_data(
     """Return a JSON-safe OHLCV summary using an injectable market-data source."""
     if not isinstance(symbol, str) or not symbol.strip():
         raise ValueError("symbol must be a non-empty string.")
-    start, end = _validate_date_range(start_date, end_date)
+    start, end = validate_date_range(start_date, end_date)
     data = downloader(symbol=symbol, start=start.date().isoformat(), end=end.date().isoformat())
     validate_ohlcv_data(data)
 

@@ -98,7 +98,7 @@ python -c "from src.llm.client import LLMClient; print(LLMClient(provider='gemin
 ## Deterministic Financial Tools
 The `tools` package exposes JSON-safe, directly callable adapters for market
 data, project-defined technical indicators, LSTM inference, and risk metrics.
-They do not call an LLM; LLM tool calling is planned for a later phase.
+They do not call an LLM; each remains directly testable in Python.
 
 ```python
 from tools.risk_metrics import get_risk_metrics
@@ -113,12 +113,13 @@ A deterministic tool is a Python adapter called directly by application code.
 An LLM-callable tool definition is a deliberately selected JSON schema and
 handler registered in `ToolRegistry`; it does not invoke an LLM in this phase.
 
-The initial registry exposes `get_market_data(symbol, start_date, end_date)`
-and `get_risk_metrics(returns)`. The market downloader remains application
-controlled, while risk-return lists are capped at 1,000 values to keep a future
-tool request concise. Technical-analysis and LSTM tools remain direct Python
-adapters because they require DataFrames and controlled model dependencies that
-should not be supplied by an LLM.
+The registry exposes `get_market_data(symbol, start_date, end_date)`,
+`get_risk_metrics(returns)`, and high-level
+`analyze_market(symbol, start_date, end_date)`. The market downloader remains
+application controlled, while risk-return lists are capped at 1,000 values to
+keep a future tool request concise. Technical-analysis and LSTM tools remain
+direct Python adapters because they require DataFrames and controlled model
+dependencies that should not be supplied by an LLM.
 
 ## Gemini Tool Calling
 Gemini tool calling uses the official stateful `interactions.create` manual
@@ -141,6 +142,31 @@ answer = LLMClient(provider="gemini").generate_with_tools(
     trace=trace,
 )
 ```
+
+## Deterministic Market Analysis
+`analyze_market(symbol, start_date, end_date)` is the high-level deterministic
+tool for a compact market analysis. Its DataFrames remain inside Python: a
+downloader feeds the project's feature engineering, technical-indicator summary,
+BTC-specific LSTM inference when applicable, and market-return risk metrics.
+The LLM-facing registry exposes only its ticker and date arguments.
+
+```text
+User / future LLM
+        |
+   analyze_market
+        |
+   Python orchestration
+   /       |       \\
+market     TA      LSTM
+   \\       |       /
+      risk/summary
+```
+
+The available LSTM artifact applies only to `BTC-USD`. Other symbols still
+receive market, technical, and risk results, with an LSTM `not_applicable`
+status. `probability_up` remains `P(Target = 1)`, where Target is 1 only when
+`Future_Return > 0.005`; its raw signal is not trading exposure. Results are
+model outputs, not investment recommendations.
 
 # Results
 ![Alt Text](src/plots/cumulative_comparison.png)

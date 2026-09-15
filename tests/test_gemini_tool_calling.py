@@ -5,7 +5,7 @@ import pytest
 
 from llm.client import LLMClient
 from tools.registry import ToolDefinition, ToolRegistry
-from tools.schemas import RISK_METRICS_PARAMETERS
+from tools.schemas import MARKET_ANALYSIS_PARAMETERS, RISK_METRICS_PARAMETERS
 
 
 class FakeInteractions:
@@ -116,6 +116,34 @@ def test_gemini_market_data_request_executes_through_registry():
 
     assert result == "BTC-USD data is available."
     assert calls == [{"symbol": "BTC-USD", "start": "2024-01-01", "end": "2024-02-01"}]
+
+
+def test_gemini_receives_market_analysis_schema_without_special_casing():
+    definition = ToolDefinition(
+        name="analyze_market",
+        description="Create a compact analysis.",
+        parameters_schema=MARKET_ANALYSIS_PARAMETERS,
+        handler=lambda **kwargs: {"symbol": kwargs["symbol"]},
+    )
+    registry = RecordingRegistry(result={"symbol": "BTC-USD"})
+    registry.definition = definition
+    fake_client = gemini_client(
+        [
+            interaction(
+                "interaction-1",
+                [tool_call("analyze_market", {"symbol": "BTC-USD", "start_date": "2020-01-01", "end_date": "2025-01-01"})],
+            ),
+            interaction("interaction-2", output_text="Analysis complete."),
+        ]
+    )
+
+    result = LLMClient(provider="gemini", api_client=fake_client).generate_with_tools(
+        "Analyze BTC-USD.", registry
+    )
+
+    assert result == "Analysis complete."
+    assert registry.calls[0][0] == "analyze_market"
+    assert fake_client.interactions.requests[0]["tools"][0]["parameters"] == MARKET_ANALYSIS_PARAMETERS
 
 
 def test_unknown_gemini_tool_request_is_rejected_by_registry():
