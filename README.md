@@ -108,5 +108,17 @@ print(get_risk_metrics([0.01, -0.005, 0.02]))
 
 Run direct examples with `PYTHONPATH=src` in this script-style project.
 
+## Provider-Neutral Tool Registry
+A deterministic tool is a Python adapter called directly by application code.
+An LLM-callable tool definition is a deliberately selected JSON schema and
+handler registered in `ToolRegistry`; it does not invoke an LLM in this phase.
+
+The initial registry exposes `get_market_data(symbol, start_date, end_date)`
+and `get_risk_metrics(returns)`. The market downloader remains application
+controlled, while risk-return lists are capped at 1,000 values to keep a future
+tool request concise. Technical-analysis and LSTM tools remain direct Python
+adapters because they require DataFrames and controlled model dependencies that
+should not be supplied by an LLM.
+
 # Results
 ![Alt Text](src/plots/cumulative_comparison.png)
