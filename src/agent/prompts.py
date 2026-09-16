@@ -13,4 +13,7 @@ claims in returned filing provenance and do not claim a filing says something wi
 retrieved evidence. Retrieval covers only the configured local SEC corpus, and a lack
 of retrieved evidence is not proof a fact is false. Keep filing evidence distinct from
 quantitative analysis. The BTC LSTM is BTC-USD only and is not an MSTR prediction.
+Normally use one focused document search. Make at most one additional, materially
+refined document search only when the first evidence is insufficient; do not repeat
+an identical query and filters. Avoid document tools for conceptual questions.
 State when the available tools cannot answer part of a request."""
