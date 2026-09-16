@@ -2,9 +2,9 @@
 
 > A tool-using financial research system that combines deterministic market analysis, SEC filing evidence, current web evidence, and a BTC-USD-specific ML signal.
 
-This repository is an evidence-oriented financial research project, not a generic chatbot, trading bot, or production investment system. A provider-neutral LLM layer coordinates selected tools and synthesizes their outputs. Quantitative calculations, SEC retrieval, and web search remain separate application-owned capabilities with structured results, provenance, traces, and limitations.
+This repository is an evidence-oriented financial research project, not a generic chatbot or automated trading system. A provider-neutral LLM layer coordinates selected tools and synthesizes their outputs. Quantitative calculations, SEC retrieval, and web search remain separate application-owned capabilities with structured results, provenance, traces, and limitations.
 
-The original BTC LSTM project remains part of the repository as a deliberately bounded quantitative capability. It is useful context for the system's history, but it does not predict arbitrary equities or drive automated trading.
+The original BTC LSTM remains as a deliberately bounded quantitative capability. It does not predict arbitrary equities or drive automated trading.
 
 ## What This Project Demonstrates
 
@@ -36,7 +36,8 @@ flowchart TD
     A --> L[Provider-neutral LLMClient]
     L --> O[OpenAI Adapter]
     L --> G[Gemini Adapter]
-    A --> R[ToolRegistry]
+    O --> R[ToolRegistry]
+    G --> R
     R --> Q[Quantitative Evidence]
     Q --> M[Market Data and Technical Analysis]
     Q --> K[Risk Metrics]
@@ -48,12 +49,10 @@ flowchart TD
     H --> X[Optional Cross-Encoder Reranking]
     R --> W[Current Web Evidence]
     W --> T[Tavily Web Search Adapter]
-    E[Evaluation] --> RE[Retrieval Evaluation and Ablation]
-    E --> AE[Cross-provider Agent Evaluation]
-    E --> EE[End-to-end Financial-agent Evaluation]
+    EV[Supporting evaluation: retrieval, agent, and E2E] -. evaluates traces, evidence, and routing .-> A
 ```
 
-All model-requested functions are validated and executed through `ToolRegistry`. Provider adapters translate the same provider-neutral tool definitions into their respective SDK formats; they do not own financial logic or directly invoke project callables.
+Provider adapters translate model tool requests through the same provider-neutral definitions. `ToolRegistry` validates and executes application-owned tools, while JSON-safe traces record tool requests, completions, tool results such as evidence, and structured limitations without exposing provider SDK objects to the agent layer.
 
 ## Evidence Routing
 
@@ -67,6 +66,16 @@ All model-requested functions are validated and executed through `ToolRegistry`.
 
 Keeping these sources separate is intentional. A historical market result is not evidence of a current event; a web snippet is not a substitute for a filing disclosure; and a local filing corpus is not a current-news source.
 
+## Evaluation at a Glance
+
+- `143` deterministic offline tests pass.
+- The manually judged SEC retrieval benchmark has 30 cases; `hybrid` is the default latency/coverage trade-off.
+- On that fixed benchmark, `hybrid_reranked` reached Hit@5 `.593`, Hit@10 `.704`, Recall@10 `.685`, nDCG@10 `.405`, and MRR `.315`.
+- The fixed `financial-agent-e2e-v1` benchmark has 20 cases covering tool routing, evidence families, provenance, capability boundaries, and structured limitations.
+- Controlled live provider subsets were used to diagnose actual routing and retrieval behavior; they were not full live 20-case benchmark runs.
+
+These deterministic measurements assess retrieval placement and evidence handling, not the factual correctness of every generated sentence.
+
 ## Example Research Workflows
 
 The following are representative prompts, not fabricated example outputs:
@@ -78,7 +87,7 @@ The following are representative prompts, not fabricated example outputs:
 - `Compare recent MSTR Bitcoin developments with risks disclosed in its SEC filings.`
 - `Analyze BTC-USD using quantitative evidence and the BTC-specific LSTM.`
 
-A mixed MSTR question can combine MSTR market evidence, MSTR SEC evidence, and current web evidence. BTC model output remains separate BTC-specific context and is never treated as an MSTR prediction.
+A mixed question can combine the relevant market, SEC, and web evidence families.
 
 ## SEC Filing RAG Pipeline
 
@@ -106,7 +115,7 @@ Optional cross-encoder reranking
 search_financial_documents
 ```
 
-The ingestion pipeline preserves official source URLs, filing date, reporting period, document type, section identifiers, section titles, and deterministic document/chunk IDs. It stores processed documents and chunks as JSONL, with raw filing HTML cached separately. Section detection is deterministic and best-effort; unclassified content is retained as `UNKNOWN` rather than discarded. Tables are preserved as text, but the project does not perform advanced table interpretation.
+The pipeline preserves official SEC provenance plus ticker, form, filing-date, reporting-period, and section metadata. Section detection is deterministic and best-effort: unclassified content remains `UNKNOWN`, and tables are retained as text rather than given advanced financial-table interpretation.
 
 `search_financial_documents` returns compact chunk-level evidence with SEC provenance. It supports ticker, document type, section, and filing-date filters. Section filtering uses normalized, case-insensitive exact matching against either the canonical identifier (for example, `PART I ITEM 1A`) or the title (for example, `Risk Factors`).
 
@@ -114,7 +123,7 @@ The ingestion pipeline preserves official source URLs, filing date, reporting pe
 
 The deterministic `analyze_market(symbol, start_date, end_date)` orchestration keeps DataFrames internal to Python and returns a compact JSON-safe result containing market summary information, project-defined technical indicators, market-return risk metrics, and LSTM status where appropriate.
 
-The historical ML component is intentionally narrow:
+The BTC LSTM is a legacy experimental ML component retained as a bounded example of integrating a learned model into a broader tool-using research system. Its scope is intentionally narrow:
 
 - Asset applicability: `BTC-USD` only.
 - Sequence length: 30 daily observations.
@@ -240,7 +249,7 @@ SEC_USER_AGENT="FinancialResearchAgent your-email@example.com"
 - `LLM_PROVIDER` selects `openai` or `gemini`; `LLM_MODEL` can override the provider default.
 - `OPENAI_API_KEY` and `GEMINI_API_KEY` are required only for the corresponding live provider.
 - `RETRIEVAL_BACKEND` accepts `dense`, `bm25`, `hybrid`, or `hybrid_reranked`. The default is `hybrid`.
-- `WEB_SEARCH_PROVIDER=tavily` records the selected local web-search adapter. Application composition receives an explicitly constructed `TavilyWebSearchProvider`; it needs `TAVILY_API_KEY`. Without a configured provider, `search_web` is not advertised by the registry.
+- `WEB_SEARCH_PROVIDER=tavily` documents the selected adapter in the local template. Current application composition receives an explicitly constructed `TavilyWebSearchProvider`, which needs `TAVILY_API_KEY`; it does not dynamically construct providers from this variable. Without a configured provider, `search_web` is not advertised by the registry.
 - `SEC_USER_AGENT` is required for live SEC EDGAR access and should identify the requester in accordance with SEC automated-access expectations.
 
 The SentenceTransformer and optional CrossEncoder are loaded lazily by the selected retrieval backend. `bm25` does not load the dense embedding model, and `hybrid_reranked` is the only mode that loads the cross-encoder.
