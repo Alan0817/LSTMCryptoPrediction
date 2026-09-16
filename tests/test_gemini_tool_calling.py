@@ -196,15 +196,6 @@ def test_gemini_tool_round_limit_is_enforced():
         )
 
 
-def test_openai_rejects_tool_enabled_generation():
-    fake_client = SimpleNamespace(responses=SimpleNamespace())
-
-    with pytest.raises(NotImplementedError, match="not supported for the OpenAI provider"):
-        LLMClient(provider="openai", api_client=fake_client).generate_with_tools(
-            "Use tools.", ToolRegistry()
-        )
-
-
 def test_registry_modules_remain_provider_independent():
     tools_directory = Path(__file__).resolve().parents[1] / "src" / "tools"
     source = "\n".join(

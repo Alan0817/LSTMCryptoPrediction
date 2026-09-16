@@ -89,7 +89,9 @@ backtest intentionally applies contrarian exposure and calculates returns as
 ## LLM Client
 The isolated LLM client reads `LLM_PROVIDER`, `LLM_MODEL`, and provider API
 keys from the environment or local `.env` file. It supports `openai` and
-`gemini`, and is not called by the LSTM, trading, or backtest pipeline.
+`gemini`, and is not called by the LSTM, trading, or backtest pipeline. Select
+`LLM_PROVIDER=openai` or `LLM_PROVIDER=gemini`; model selection remains
+environment-driven through `LLM_MODEL` or a provider-specific model variable.
 
 ```bash
 python -c "from src.llm.client import LLMClient; print(LLMClient(provider='gemini').generate('Explain RSI in one sentence.'))"
@@ -125,7 +127,9 @@ dependencies that should not be supplied by an LLM.
 Gemini tool calling uses the official stateful `interactions.create` manual
 function-call loop. Gemini selects from provider-neutral registry schemas, but
 the application validates and executes every request through `ToolRegistry`.
-OpenAI tool calling is not implemented yet.
+Gemini and OpenAI provider adapters both translate the same provider-neutral
+registry definitions into their SDK-specific function-tool format. Every actual
+function execution still passes through `ToolRegistry`.
 
 ```text
 Gemini interaction -> ToolRegistry.execute -> JSON function result -> Gemini final text
@@ -202,7 +206,21 @@ print(result.to_dict())
 
 `FinancialAnalysisResult` contains the final answer, unique tool names derived
 from actual trace events, the trace itself, and structured limitations reported
-by completed tools. OpenAI tool-enabled generation is not implemented yet.
+by completed tools.
+
+```text
+FinancialAnalysisAgent
+        |
+    LLMClient
+    /       \\
+Gemini    OpenAI
+    \\       /
+   ToolRegistry
+        |
+   analyze_market
+        |
+deterministic pipeline
+```
 
 ## Agent Evaluation And Architecture Audit
 The offline `evaluation` package contains eight representative agent cases for
@@ -228,12 +246,13 @@ grow with payload size; a future trace design may split execution metadata,
 structured evidence, and debug payloads. The agent needs the current structured
 results to preserve deterministic limitations.
 
-### Phase 2.7 Readiness
+### Provider Tool-Calling Boundary
 `FinancialAnalysisAgent` depends only on the provider-neutral `LLMClient`
 interface and `ToolRegistry`; no Gemini types leak into the agent or registry.
-OpenAI tool calling can therefore add an OpenAI provider adapter that translates
-the existing tool definitions, executes requests through `ToolRegistry`, and
-emits the same trace event contract. It is not implemented in this phase.
+The Gemini and OpenAI adapters each translate the existing tool definitions,
+execute requests through `ToolRegistry`, and emit the same trace event contract.
+This keeps future provider additions below the application and deterministic
+financial layers.
 
 # Results
 ![Alt Text](src/plots/cumulative_comparison.png)
