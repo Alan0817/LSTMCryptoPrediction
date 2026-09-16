@@ -407,5 +407,20 @@ providers to cite returned filing metadata, for example `[MSTR 10-K, Risk
 Factors, filed 2026-02-19]`. The BTC LSTM remains BTC-USD only: it is not an MSTR
 prediction and document retrieval does not change that boundary.
 
+## Retrieval Evaluation
+Phase 3.1 established the local dense-retrieval baseline. Phase 3.2 exposed it
+through the financial-document tool. Phase 3.3 adds a separate manually judged
+failure-analysis benchmark without changing embeddings, chunking, filtering, or
+ranking. Positive cases contain reviewed relevant chunk IDs and provenance;
+negative cases are reported separately because dense retrieval normally returns
+nearest neighbors whenever a candidate corpus exists.
+
+Phase 3.3 reports Hit@K, Recall@K, binary nDCG@K, MRR, first-relevant rank,
+score gaps, and groups diagnostics by category, ticker, and requested filing
+form. It uses no LLM judge. Its judgment set is different from the Phase 3.1
+12-case metadata benchmark, so their metrics are historical references rather
+than directly comparable scores. Evaluation artifacts are written under ignored
+`evaluation_results/` and contain no embeddings or model files.
+
 # Results
 ![Alt Text](src/plots/cumulative_comparison.png)
