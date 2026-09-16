@@ -1,426 +1,312 @@
-# LSTM-based Bitcoin Trading Strategy
+# Financial Research Agent
 
-## Overview
-This project explores whether an LSTM can extract predictive information from historical Bitcoin market data and evaluates the resulting threshold-based backtest.
+> A tool-using financial research system that combines deterministic market analysis, SEC filing evidence, current web evidence, and a BTC-USD-specific ML signal.
 
-### Project Workflow
-```
-Data Collection
-    ↓
-Feature Engineering
-    ↓
-LSTM Prediction
-    ↓
-Signal Generation
-    ↓
-Backtesting
-    ↓
-Performance Evaluation
-```
+This repository is an evidence-oriented financial research project, not a generic chatbot, trading bot, or production investment system. A provider-neutral LLM layer coordinates selected tools and synthesizes their outputs. Quantitative calculations, SEC retrieval, and web search remain separate application-owned capabilities with structured results, provenance, traces, and limitations.
 
-## Dataset
-- Asset: BTC-USD
-- Source: Yahoo Finance
-- Period: 2020–2025
-- Frequency: Daily
+The original BTC LSTM project remains part of the repository as a deliberately bounded quantitative capability. It is useful context for the system's history, but it does not predict arbitrary equities or drive automated trading.
 
-## Features
-### Technical Indicators
-- RSI
-- MACD
-- MACD Signal
-- Moving Averages
-- EMA
-- Volatility
-### Market Features
-- Close Price
-- Volume
-- Returns
+## What This Project Demonstrates
 
-## Model Architecture
-```
-Input Sequence (30 Days)
-          ↓
-      LSTM
-          ↓
- Fully Connected
-          ↓
-     Sigmoid
-          ↓
- Upward Probability
- ```
+- Provider-neutral LLM tool calling with OpenAI and Gemini adapters.
+- Deterministic market, technical-analysis, risk, and BTC-USD LSTM tools.
+- Section-aware SEC 10-K and 10-Q ingestion with stable metadata and provenance.
+- Local dense, lexical BM25, hybrid RRF, and optional cross-encoder retrieval.
+- Provider-neutral current-information web search with a Tavily adapter.
+- Tool traces, structured limitations, and evaluation-driven engineering.
 
-## Trading Semantics
-```
-Model output: probability of Target = 1
+In this design, the LLM is responsible for **orchestration and synthesis**. It is not the numerical financial predictor, SEC parser, retriever, or web-search provider.
 
-Probability > 0.52 → raw threshold label +1
-Probability < 0.48 → raw threshold label -1
-Otherwise → raw threshold label 0
+## Key Capabilities
 
-Frozen backtest exposure = -raw threshold label
-Raw +1 → exposure -1
-Raw -1 → exposure +1
-Raw 0 → exposure 0
+| Capability | What it provides |
+| --- | --- |
+| Quantitative evidence | Market data, project-defined indicators, return risk metrics, and compact market analysis. |
+| BTC-specific ML | A PyTorch LSTM classification signal for `BTC-USD` only. |
+| SEC filing evidence | Deterministic ingestion and local retrieval over configured 10-K and 10-Q filings. |
+| Current web evidence | Bounded title, URL, snippet, source, and publication-date metadata through an application-owned search tool. |
+| Provider neutrality | The same `FinancialAnalysisAgent` and `ToolRegistry` work with OpenAI or Gemini tool-calling adapters. |
+| Evaluation | Deterministic retrieval, tool-routing, planning, provenance, limitation, and end-to-end evidence-handling evaluation. |
+
+## Architecture
+
+```mermaid
+flowchart TD
+    U[User Query] --> A[FinancialAnalysisAgent]
+    A --> L[Provider-neutral LLMClient]
+    L --> O[OpenAI Adapter]
+    L --> G[Gemini Adapter]
+    A --> R[ToolRegistry]
+    R --> Q[Quantitative Evidence]
+    Q --> M[Market Data and Technical Analysis]
+    Q --> K[Risk Metrics]
+    Q --> B[BTC-USD LSTM]
+    R --> S[SEC Filing Evidence]
+    S --> I[Section-aware SEC Ingestion]
+    S --> D[Dense and BM25 Retrieval]
+    D --> H[Hybrid RRF]
+    H --> X[Optional Cross-Encoder Reranking]
+    R --> W[Current Web Evidence]
+    W --> T[Tavily Web Search Adapter]
+    E[Evaluation] --> RE[Retrieval Evaluation and Ablation]
+    E --> AE[Cross-provider Agent Evaluation]
+    E --> EE[End-to-end Financial-agent Evaluation]
 ```
 
-The threshold label is not itself a long or short position. The current
-backtest intentionally applies contrarian exposure and calculates returns as
-`exposure * next-day market return`.
+All model-requested functions are validated and executed through `ToolRegistry`. Provider adapters translate the same provider-neutral tool definitions into their respective SDK formats; they do not own financial logic or directly invoke project callables.
 
-## Result
-| Metric       | Strategy | Buy & Hold |
-| ------------ | -------- | ---------- |
-| Sharpe Ratio | 1.672    | 1.547      |
-| Max Drawdown | 0.306    | 0.262      |
+## Evidence Routing
 
+| Question type | Intended evidence source |
+| --- | --- |
+| Historical market behavior | Quantitative tools |
+| Technical indicators or risk metrics | Quantitative tools |
+| A specific 10-K or 10-Q disclosure | Local SEC retrieval |
+| Current, latest, or recent event | Web search |
+| Broader research question | A controlled combination of the relevant evidence families |
 
-## Findings
-- Target engineering matters more than model complexity
-- Financial prediction is extremely noisy
-- Trading evaluation is more important than prediction accuracy
+Keeping these sources separate is intentional. A historical market result is not evidence of a current event; a web snippet is not a substitute for a filing disclosure; and a local filing corpus is not a current-news source.
+
+## Example Research Workflows
+
+The following are representative prompts, not fabricated example outputs:
+
+- `What is RSI?`
+- `Analyze NVDA from 2026-01-01 to 2026-06-30.`
+- `What supply-chain risks does Apple disclose in its filings?`
+- `What are the latest developments involving NVIDIA?`
+- `Compare recent MSTR Bitcoin developments with risks disclosed in its SEC filings.`
+- `Analyze BTC-USD using quantitative evidence and the BTC-specific LSTM.`
+
+A mixed MSTR question can combine MSTR market evidence, MSTR SEC evidence, and current web evidence. BTC model output remains separate BTC-specific context and is never treated as an MSTR prediction.
+
+## SEC Filing RAG Pipeline
+
+The current controlled evaluation corpus contains the latest configured `10-K` and `10-Q` filings for `NVDA`, `AAPL`, and `MSTR`. CIK is the stable SEC identity; ticker metadata is retained for filtering and citations. This is a small evaluation corpus, not a production-scale SEC archive.
+
+```text
+Official SEC EDGAR filing
+        |
+        v
+HTML cleanup and section normalization
+        |
+        v
+Section-aware chunking with filing metadata
+        |
+        v
+Dense embeddings and BM25 lexical index
+        |
+        v
+Metadata filtering and hybrid RRF
+        |
+        v
+Optional cross-encoder reranking
+        |
+        v
+search_financial_documents
+```
+
+The ingestion pipeline preserves official source URLs, filing date, reporting period, document type, section identifiers, section titles, and deterministic document/chunk IDs. It stores processed documents and chunks as JSONL, with raw filing HTML cached separately. Section detection is deterministic and best-effort; unclassified content is retained as `UNKNOWN` rather than discarded. Tables are preserved as text, but the project does not perform advanced table interpretation.
+
+`search_financial_documents` returns compact chunk-level evidence with SEC provenance. It supports ticker, document type, section, and filing-date filters. Section filtering uses normalized, case-insensitive exact matching against either the canonical identifier (for example, `PART I ITEM 1A`) or the title (for example, `Risk Factors`).
+
+## Quantitative Analysis and the BTC LSTM
+
+The deterministic `analyze_market(symbol, start_date, end_date)` orchestration keeps DataFrames internal to Python and returns a compact JSON-safe result containing market summary information, project-defined technical indicators, market-return risk metrics, and LSTM status where appropriate.
+
+The historical ML component is intentionally narrow:
+
+- Asset applicability: `BTC-USD` only.
+- Sequence length: 30 daily observations.
+- Model: PyTorch LSTM classifier.
+- Output: `probability_up = P(Target = 1)`.
+- Target: `Target = 1` when `Future_Return > 0.005`.
+- Threshold labels: probability above `0.52` yields raw signal `+1`, below `0.48` yields raw signal `-1`, and otherwise `0`.
+
+Raw signal is not a long/short exposure. The historical backtest deliberately preserves its contrarian convention: exposure is the negated raw signal, and strategy returns use that exposure times the next-day market return. The model and backtest are experimental research artifacts, not deployable trading performance.
+
+## Retrieval Evaluation
+
+Phase 3.3 introduced a separate manually judged retrieval benchmark (`phase-3.3-manual-v1`) with positive and negative cases. It records relevance labels at the chunk level, diagnostic ranks, category breakdowns, and failure annotations without an LLM judge. Phase 3.4 then evaluated four retrieval variants on exactly that benchmark.
+
+| Retriever | Hit@5 | Hit@10 | Recall@10 | nDCG@10 | MRR |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| Dense | .444 | .556 | .519 | .309 | .247 |
+| BM25 | .407 | .593 | .593 | .320 | .235 |
+| Hybrid | .444 | .667 | .630 | .354 | .277 |
+| Hybrid + reranker | .593 | .704 | .685 | .405 | .315 |
+
+These numbers are benchmark-specific and are not claims of statistical significance or universal retrieval quality. Hybrid improved candidate coverage over dense retrieval in this corpus and is the default production composition because it offers a practical latency/coverage trade-off. `hybrid_reranked` achieved the strongest fixed-benchmark ranking metrics, but the local cross-encoder adds substantial CPU latency and remains an optional quality mode.
+
+The retrieval stack is local and provider-neutral. It uses exact normalized cosine similarity for dense candidates, a deterministic lowercase word tokenizer for BM25, Reciprocal Rank Fusion rather than raw-score averaging, and optional reranking only over a bounded candidate set.
+
+## Agent and End-to-End Evaluation
+
+The project keeps several evaluation layers separate:
+
+| Evaluation layer | What it measures |
+| --- | --- |
+| Phase 2 agent evaluation | Tool routing, required calls, duplicate/extra calls, and limitations across provider-neutral traces. |
+| Phase 2.8 cross-provider evaluation | The same agent benchmark executed separately against OpenAI and Gemini. |
+| Phase 3.3 retrieval analysis | Manually judged chunk ranking, failure diagnostics, and negative-query behavior. |
+| Phase 3.4 retrieval ablation | Dense, BM25, hybrid, and hybrid-reranked retrieval behavior on fixed labels. |
+| Phase 4.0 E2E evaluation | Routing, evidence availability, provenance, capability boundaries, and planning behavior for the complete research agent. |
+
+The fixed end-to-end benchmark is `financial-agent-e2e-v1` with 20 cases across conceptual, quantitative, SEC, web, quantitative-plus-SEC, quantitative-plus-web, SEC-plus-web, full evidence mix, BTC applicability, and unavailable-capability scenarios. Its deterministic metrics include:
+
+- required-tool recall, missing calls, forbidden calls, and duplicate calls;
+- quantitative, document, and web evidence-family coverage;
+- structured SEC and web provenance availability;
+- document and web retrieval planning diagnostics; and
+- structured limitation preservation.
+
+These metrics evaluate routing and evidence handling. They do **not** independently prove factual correctness for every generated sentence, prose quality, investment quality, or provider intelligence. The earlier eight-case cross-provider run likewise measured tool-use behavior and limitations without declaring a provider winner.
+
+### Controlled Live E2E Findings
+
+A controlled OpenAI five-case live subset covered conceptual, quantitative, SEC, web, and SEC-plus-web scenarios. Observed successful behaviors included:
+
+- The conceptual RSI question used no tools.
+- NVDA quantitative analysis used the quantitative analysis tool.
+- The BTC-only LSTM applicability limitation was preserved for NVDA.
+- Mixed SEC-plus-web research used both evidence families when each was available.
+- Returned SEC chunks retained real filing provenance.
+- The web-search regression run stayed within the intended two-search planning budget.
+
+The live evaluation also exposed a useful generic correction: an agent may request a human-readable section title such as `Risk Factors`, while corpus chunks use a canonical identifier such as `PART I ITEM 1A`. The retrieval contract now matches normalized exact values against either field. Regression tests and a subsequent live run confirmed that `section="Risk Factors"` can retrieve MSTR 10-K chunks labeled `PART I ITEM 1A`.
+
+This is not a claim of universal retrieval correctness. In particular, the agent can still infer overly restrictive SEC filing-date filters even when the user did not explicitly request a filing-date constraint. Because filtering occurs before ranking, that can yield a truthful `no_results` response while relevant evidence exists elsewhere in the configured corpus.
 
 ## Known Limitations
-- Evaluation uses one fixed holdout period rather than walk-forward validation.
-- Backtest returns exclude transaction costs and slippage.
-- Reported performance does not establish that the strategy is profitable or deployable.
-- Sharpe annualization uses `sqrt(252)` even though BTC trades daily.
 
-## LLM Client
-The isolated LLM client reads `LLM_PROVIDER`, `LLM_MODEL`, and provider API
-keys from the environment or local `.env` file. It supports `openai` and
-`gemini`, and is not called by the LSTM, trading, or backtest pipeline. Select
-`LLM_PROVIDER=openai` or `LLM_PROVIDER=gemini`; model selection remains
-environment-driven through `LLM_MODEL` or a provider-specific model variable.
+- The local SEC evaluation corpus is limited to configured NVDA, AAPL, and MSTR filings.
+- SEC section detection and table serialization are deterministic best-effort processing, not complete financial-statement interpretation.
+- `filing_date` means the actual SEC filing/submission date; it is distinct from the financial reporting period. The agent is instructed to omit filing-date filters unless the user explicitly requests a filing-date restriction, but live evaluation showed that over-restrictive planning can still occur.
+- A structured `no_results` response does not prove a fact is false; it reports the configured corpus, query, and filters produced no matching evidence.
+- Search-result snippets are not full-page verification. Source and `published_at` metadata depend on what the search provider returns.
+- Web search is not a replacement for filing-specific evidence, audited filings, or independent fact verification.
+- The BTC LSTM is limited to `BTC-USD`; it does not predict NVDA, AAPL, MSTR, or arbitrary securities.
+- The legacy BTC backtest uses one fixed holdout, excludes transaction costs and slippage, has no walk-forward validation, and annualizes with `sqrt(252)` despite BTC trading daily.
+- This project is research tooling, not investment advice, production-ready trading infrastructure, or a guarantee of financial outcomes.
 
-```bash
-python -c "from src.llm.client import LLMClient; print(LLMClient(provider='gemini').generate('Explain RSI in one sentence.'))"
-```
-
-## Deterministic Financial Tools
-The `tools` package exposes JSON-safe, directly callable adapters for market
-data, project-defined technical indicators, LSTM inference, and risk metrics.
-They do not call an LLM; each remains directly testable in Python.
-
-```python
-from tools.risk_metrics import get_risk_metrics
-
-print(get_risk_metrics([0.01, -0.005, 0.02]))
-```
-
-Run direct examples with `PYTHONPATH=src` in this script-style project.
-
-## Provider-Neutral Tool Registry
-A deterministic tool is a Python adapter called directly by application code.
-An LLM-callable tool definition is a deliberately selected JSON schema and
-handler registered in `ToolRegistry`; it does not invoke an LLM in this phase.
-
-The registry exposes `get_market_data(symbol, start_date, end_date)`,
-`get_risk_metrics(returns)`, and high-level
-`analyze_market(symbol, start_date, end_date)`. The market downloader remains
-application controlled, while risk-return lists are capped at 1,000 values to
-keep a future tool request concise. Technical-analysis and LSTM tools remain
-direct Python adapters because they require DataFrames and controlled model
-dependencies that should not be supplied by an LLM.
-
-## Gemini Tool Calling
-Gemini tool calling uses the official stateful `interactions.create` manual
-function-call loop. Gemini selects from provider-neutral registry schemas, but
-the application validates and executes every request through `ToolRegistry`.
-Gemini and OpenAI provider adapters both translate the same provider-neutral
-registry definitions into their SDK-specific function-tool format. Every actual
-function execution still passes through `ToolRegistry`.
+## Repository Structure
 
 ```text
-Gemini interaction -> ToolRegistry.execute -> JSON function result -> Gemini final text
+src/
+  agent/              FinancialAnalysisAgent, prompts, and result types
+  documents/          SEC client, parser, sections, chunking, storage, ingestion
+  evaluation/         Agent, cross-provider, and end-to-end evaluation helpers
+  llm/                Provider-neutral client with OpenAI and Gemini adapters
+  retrieval/          Dense, BM25, hybrid, reranking, index, and evaluation code
+  tools/              Registry and deterministic financial/document tools
+  app.py              Application composition helper
+  web_search.py       Provider-neutral search interface and Tavily adapter
+  backtest.py         Historical BTC backtest entry point
+  train.py             Historical BTC LSTM training entry point
+tests/                Fully offline unit and integration-style tests
+data/                 Local processed BTC data and ignored generated SEC/index artifacts
+.env.example          Safe environment-variable template
+requirements.txt      Python dependencies
 ```
 
-```python
-from llm.client import LLMClient
-from tools.registry import ToolRegistry
+## Setup
 
-trace = []
-answer = LLMClient(provider="gemini").generate_with_tools(
-    "Calculate risk metrics for [0.01, -0.005, 0.02]. Use a tool.",
-    ToolRegistry(),
-    trace=trace,
+Create and activate a virtual environment, then install the project dependency set:
+
+```bash
+python -m venv .venv
+source .venv/bin/activate
+python -m pip install -r requirements.txt
+cp .env.example .env
+```
+
+Populate only the capabilities you intend to use. Keep `.env` local and never commit credentials.
+
+## Configuration
+
+The current `.env.example` defines the supported configuration surface:
+
+```ini
+LLM_PROVIDER=gemini
+LLM_MODEL=
+OPENAI_API_KEY=
+GEMINI_API_KEY=
+RETRIEVAL_BACKEND=hybrid
+WEB_SEARCH_PROVIDER=tavily
+TAVILY_API_KEY=
+SEC_USER_AGENT="FinancialResearchAgent your-email@example.com"
+```
+
+- `LLM_PROVIDER` selects `openai` or `gemini`; `LLM_MODEL` can override the provider default.
+- `OPENAI_API_KEY` and `GEMINI_API_KEY` are required only for the corresponding live provider.
+- `RETRIEVAL_BACKEND` accepts `dense`, `bm25`, `hybrid`, or `hybrid_reranked`. The default is `hybrid`.
+- `WEB_SEARCH_PROVIDER=tavily` records the selected local web-search adapter. Application composition receives an explicitly constructed `TavilyWebSearchProvider`; it needs `TAVILY_API_KEY`. Without a configured provider, `search_web` is not advertised by the registry.
+- `SEC_USER_AGENT` is required for live SEC EDGAR access and should identify the requester in accordance with SEC automated-access expectations.
+
+The SentenceTransformer and optional CrossEncoder are loaded lazily by the selected retrieval backend. `bm25` does not load the dense embedding model, and `hybrid_reranked` is the only mode that loads the cross-encoder.
+
+## Running the System
+
+This repository provides a composition helper rather than an interactive agent CLI. The following direct Python invocation uses the real application boundaries and requires an existing local SEC corpus/index plus the relevant provider credentials:
+
+```bash
+PYTHONPATH=src python - <<'PY'
+from app import build_financial_analysis_agent
+from web_search import TavilyWebSearchProvider
+
+agent = build_financial_analysis_agent(
+    provider="openai",
+    retrieval_backend="hybrid",
+    web_search_provider=TavilyWebSearchProvider(),
 )
-```
-
-## Deterministic Market Analysis
-`analyze_market(symbol, start_date, end_date)` is the high-level deterministic
-tool for a compact market analysis. Its DataFrames remain inside Python: a
-downloader feeds the project's feature engineering, technical-indicator summary,
-BTC-specific LSTM inference when applicable, and market-return risk metrics.
-The LLM-facing registry exposes only its ticker and date arguments.
-
-```text
-User / future LLM
-        |
-   analyze_market
-        |
-   Python orchestration
-   /       |       \\
-market     TA      LSTM
-   \\       |       /
-      risk/summary
-```
-
-The available LSTM artifact applies only to `BTC-USD`. Other symbols still
-receive market, technical, and risk results, with an LSTM `not_applicable`
-status. `probability_up` remains `P(Target = 1)`, where Target is 1 only when
-`Future_Return > 0.005`; its raw signal is not trading exposure. Results are
-model outputs, not investment recommendations.
-
-## FinancialAnalysisAgent
-`FinancialAnalysisAgent` is a thin application layer for natural-language
-financial-analysis requests. It delegates reasoning and tool selection to a
-tool-capable LLM client, while all quantitative work remains in deterministic
-tools behind `ToolRegistry`.
-
-```text
-User
-  |
-FinancialAnalysisAgent
-  |
-LLMClient
-  |
-Gemini
-  |
-ToolRegistry
-  |
-analyze_market
-  |
-deterministic financial pipeline
-```
-
-```python
-from agent.financial_agent import FinancialAnalysisAgent
-from llm.client import LLMClient
-from tools.registry import ToolRegistry
-
-agent = FinancialAnalysisAgent(LLMClient(provider="gemini"), ToolRegistry())
-result = agent.run("Analyze BTC-USD from 2024-09-01 to 2024-12-01.")
+result = agent.run("What are the latest developments involving NVIDIA?")
 print(result.to_dict())
+PY
 ```
 
-`FinancialAnalysisResult` contains the final answer, unique tool names derived
-from actual trace events, the trace itself, and structured limitations reported
-by completed tools.
+To work without current web search, omit `web_search_provider`. The agent then exposes only capabilities that are actually configured. Both forms may make live provider calls; they are not part of the test suite.
 
-```text
-FinancialAnalysisAgent
-        |
-    LLMClient
-    /       \\
-Gemini    OpenAI
-    \\       /
-   ToolRegistry
-        |
-   analyze_market
-        |
-deterministic pipeline
-```
-
-## Agent Evaluation And Architecture Audit
-The offline `evaluation` package contains eight representative agent cases for
-conceptual questions, market analysis, risk metrics, market data, unsupported
-LSTM symbols, unavailable data capabilities, and recommendation-style requests.
-It measures trace-derived required-tool recall, forbidden and extra calls,
-unnecessary calls, exact duplicate requests, call/round counts, and structured
-limitation preservation. It deliberately does not score natural-language
-quality, factual prose, or investment advice with an LLM.
-
-The observed `analyze_market -> get_market_data` pattern is represented as an
-allowed but extra call in the full-analysis case. This records possible
-redundancy without preventing a provider from requesting additional evidence.
-Captured results can be evaluated offline later for Gemini or OpenAI:
+Historical BTC pipeline entry points remain available:
 
 ```bash
-PYTHONPATH=src python -m evaluation.agent_evaluator captured_results.json
+PYTHONPATH=src python src/data_downloader.py
+PYTHONPATH=src python src/train.py
+PYTHONPATH=src python src/backtest.py
 ```
 
-Current traces include requested tool names and arguments, completed tool
-results, and round numbers. Results are JSON-safe, but full tool results can
-grow with payload size; a future trace design may split execution metadata,
-structured evidence, and debug payloads. The agent needs the current structured
-results to preserve deterministic limitations.
+Training and backtesting retain their historical research semantics and should not be interpreted as deployment commands.
 
-### Provider Tool-Calling Boundary
-`FinancialAnalysisAgent` depends only on the provider-neutral `LLMClient`
-interface and `ToolRegistry`; no Gemini types leak into the agent or registry.
-The Gemini and OpenAI adapters each translate the existing tool definitions,
-execute requests through `ToolRegistry`, and emit the same trace event contract.
-This keeps future provider additions below the application and deterministic
-financial layers.
+## Running Tests and Evaluation
 
-## Cross-Provider Benchmark
-`evaluation.provider_benchmark` runs the same eight financial-agent cases once
-for a configured provider, saves final answers and provider-neutral traces, and
-passes successful results to the deterministic evaluator. Artifacts are written
-under the ignored `evaluation_results/` directory and include provider, model,
-benchmark version, UTC timestamp, case IDs, default maximum tool rounds,
-aggregate metrics, per-case records, and recorded failures. They never include
-environment values or credentials.
+Run the offline test suite:
+
+```bash
+python -m pytest -q
+```
+
+Run the original local dense-retrieval baseline evaluation against an existing corpus/index:
+
+```bash
+PYTHONPATH=src python -m retrieval.benchmark \
+  --corpus-dir data/financial_documents \
+  --index-dir data/financial_documents/semantic_index
+```
+
+Run the eight-case cross-provider agent benchmark explicitly for one configured live LLM provider:
 
 ```bash
 PYTHONPATH=src python -m evaluation.provider_benchmark --provider gemini
 PYTHONPATH=src python -m evaluation.provider_benchmark --provider openai --model gpt-5.6-luna
 ```
 
-The runner measures required-tool recall, missing/forbidden/extra/unnecessary
-calls, exact duplicate calls, tool-call and round counts, and structured
-limitation preservation. It does not measure prose quality, unrestricted factual
-knowledge, semantic redundancy of allowed extra calls, investment quality, or
-provider intelligence. Live model outputs can vary across runs despite identical
-case prompts and system instructions.
+Those commands save JSON artifacts to `evaluation_results/` by default. They can make live LLM calls and are intentionally separate from pytest. End-to-end evaluation is exposed through `run_e2e_benchmark()` and `write_e2e_artifact()` in `src/evaluation/e2e.py`, allowing callers to run a selected case subset or the fixed 20-case benchmark with an explicitly composed agent.
 
-The first one-run comparison used `gemini-3.6-flash` and `gpt-5.6-luna`:
+## Design Notes
 
-| Metric | Gemini | OpenAI |
-| --- | ---: | ---: |
-| Attempted cases | 8 | 8 |
-| Completed cases | 6 | 8 |
-| Required-tool recall (completed cases) | 1.000 | 0.875 |
-| Missing required tools | 0 | 1 |
-| Forbidden calls | 0 | 0 |
-| Extra calls | 1 | 0 |
-| Unnecessary calls | 1 | 0 |
-| Duplicate calls | 0 | 0 |
-| Tool calls / rounds | 5 / 5 | 3 / 3 |
-| Limitations preserved | 1 / 1 | 0 / 1 |
+- **Controlled execution boundary:** the LLM chooses from advertised tools, but `ToolRegistry` validates arguments and executes only allowlisted functions.
+- **Provider independence:** LLM providers and web-search providers are separate interfaces. Neither OpenAI-hosted search nor Gemini grounding is used as the application’s core web-search tool.
+- **Retrieval strategy is application configuration:** the LLM does not choose dense, BM25, hybrid, or reranked retrieval.
+- **Evidence is structured first:** tool outputs retain JSON-safe metadata, source URLs, statuses, and limitations so evaluation does not need to infer behavior from prose.
+- **Evaluation informs, rather than hides, failures:** observed tool-routing, retrieval, provenance, and planning weaknesses are recorded without tuning benchmark cases or silently fabricating evidence.
 
-Gemini completed the full BTC analysis with `analyze_market`; OpenAI did the
-same in this run. Gemini additionally called `analyze_market` for the direct
-ETH-LSTM request, which was measured as extra and unnecessary. For the
-unsupported-symbol analysis, Gemini called `analyze_market` and preserved its
-structured limitation; OpenAI made no tool call, producing the one missing
-required-tool and limitation-preservation failure. Gemini's Apple P/E and
-recommendation cases were recorded as free-tier rate-limit failures, not treated
-as successful no-tool responses. These are observations from one run, not a
-provider ranking.
-
-## SEC Financial-Document Corpus
-Phase 3.0 adds deterministic SEC EDGAR ingestion. Phase 3.1 adds local semantic
-retrieval over the resulting chunks; RAG answer generation is not implemented.
-
-```text
-Financial Research Agent
-          |
-    future RAG tool
-          |
-   retrieval layer
-          |
-   chunked corpus
-          |
-    SEC ingestion
-          |
-      SEC EDGAR
-```
-
-The initial controlled corpus configuration contains `NVDA`, `AAPL`, and
-`MSTR`, with official `10-K` and `10-Q` primary HTML filings. NVDA offers an
-AI/semiconductor research case, AAPL a large diversified technology-company
-case, and MSTR a bridge between corporate research and Bitcoin exposure. These
-are configuration entries, not parsing branches: additional SEC-reporting
-companies can be added through `CompanyIdentity` data. The existing LSTM remains
-`BTC-USD` only and is unrelated to SEC-document applicability.
-
-`SECClient` discovers filings from SEC submissions metadata using CIK as the
-stable identifier, requires an identifiable `SEC_USER_AGENT`, and downloads
-official primary filing HTML. The pipeline removes non-content markup, preserves
-paragraphs and basic pipe-delimited table rows, detects Part/Item headings
-best-effort, chunks within sections, and writes duplicate-safe JSONL documents
-and chunks under ignored `data/financial_documents/`. Raw HTML is cached under
-ignored `data/sec_filings/raw/`.
-
-Section detection is intentionally heuristic: formatting and table-of-contents
-patterns vary across filings, so unresolved text is retained as `UNKNOWN` rather
-than dropped. Table cells are preserved as text but are not given advanced
-financial-table interpretation. Corpus validation checks IDs, metadata, source
-URLs, chunk references, contiguous indices, document types, and empty text.
-
-## Local SEC Semantic Retrieval
-Phase 3.1 builds a provider-neutral local semantic index over the Phase 3.0
-filing chunks. It uses a lazily loaded SentenceTransformer model (default
-`all-MiniLM-L6-v2`, configurable through `SEC_EMBEDDING_MODEL`), normalized
-vectors, and exact NumPy cosine similarity. It does not call an LLM, alter the
-stored filing text, or generate RAG answers.
-
-```text
-SEC ingestion -> structured chunks -> local embeddings -> exact semantic retrieval
-```
-
-The persistent index stores `vectors.npy` and inspectable `metadata.json`,
-including ordered chunk IDs, embedding-model identity, vector dimension, and a
-corpus fingerprint. Loading fails if the current corpus does not match that
-fingerprint. Filtering by ticker, filing form, section, and filing-date range
-happens before ranking, so filtered searches never leak other companies' chunks.
-
-```python
-from documents.storage import CorpusStorage
-from retrieval.embeddings import SentenceTransformerEmbeddingModel
-from retrieval.index import build_index, load_index
-from retrieval.retriever import SemanticRetriever
-
-chunks = CorpusStorage().load_chunks()
-model = SentenceTransformerEmbeddingModel()
-build_index(chunks, model, "data/financial_documents/semantic_index")
-index = load_index(chunks, "data/financial_documents/semantic_index", model)
-results = SemanticRetriever(index, chunks, model).search(
-    "What risks does the company disclose about Bitcoin?", ticker="MSTR"
-)
-```
-
-`python -m retrieval.benchmark` evaluates 12 manually specified query cases
-across NVDA, AAPL, and MSTR. Its Hit@K, Recall@K, and MRR reflect manually
-reviewed ticker/form/section expectations rather than exhaustive relevance or
-answer-quality judgments. The baseline has no BM25, reranking, vector database,
-query rewriting, agent integration, or RAG synthesis. The SEC corpus remains
-NVDA/AAPL/MSTR, while the existing LSTM remains BTC-USD only.
-
-## SEC Evidence Tool
-`search_financial_documents` exposes the local semantic retriever through the
-provider-neutral `ToolRegistry`. The registry receives a prebuilt retriever as a
-controlled dependency; it does not load a model or index on each call. When no
-retriever is configured, the tool is deliberately not registered, so an LLM never
-advertises unavailable SEC-search capability.
-
-```text
-User
-  |
-FinancialAnalysisAgent
-  |
-ToolRegistry
-  +-- quantitative tools
-  +-- search_financial_documents -> SemanticRetriever -> SEC corpus
-```
-
-Document searches accept a bounded query (`top_k` 1-10) plus optional ticker,
-form, section, and filing-date filters. Results preserve chunk text and official
-SEC provenance for grounded synthesis; `no_results` is explicit and is not a
-claim that a fact is false. Retrieval is local and provider-neutral, not web or
-current-news search. The configured corpus currently covers NVDA, AAPL, and MSTR.
-
-The agent keeps quantitative evidence distinct from filing evidence and instructs
-providers to cite returned filing metadata, for example `[MSTR 10-K, Risk
-Factors, filed 2026-02-19]`. The BTC LSTM remains BTC-USD only: it is not an MSTR
-prediction and document retrieval does not change that boundary.
-
-## Retrieval Evaluation
-Phase 3.1 established the local dense-retrieval baseline. Phase 3.2 exposed it
-through the financial-document tool. Phase 3.3 adds a separate manually judged
-failure-analysis benchmark without changing embeddings, chunking, filtering, or
-ranking. Positive cases contain reviewed relevant chunk IDs and provenance;
-negative cases are reported separately because dense retrieval normally returns
-nearest neighbors whenever a candidate corpus exists.
-
-Phase 3.3 reports Hit@K, Recall@K, binary nDCG@K, MRR, first-relevant rank,
-score gaps, and groups diagnostics by category, ticker, and requested filing
-form. It uses no LLM judge. Its judgment set is different from the Phase 3.1
-12-case metadata benchmark, so their metrics are historical references rather
-than directly comparable scores. Evaluation artifacts are written under ignored
-`evaluation_results/` and contain no embeddings or model files.
-
-# Results
-![Alt Text](src/plots/cumulative_comparison.png)
+The result is a portfolio project focused on building inspectable AI-assisted financial research workflows with explicit evidence boundaries and capability limits.
