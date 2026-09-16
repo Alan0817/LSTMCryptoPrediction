@@ -301,8 +301,8 @@ as successful no-tool responses. These are observations from one run, not a
 provider ranking.
 
 ## SEC Financial-Document Corpus
-Phase 3.0 adds deterministic SEC EDGAR ingestion only; embeddings, retrieval,
-and RAG generation are not implemented yet.
+Phase 3.0 adds deterministic SEC EDGAR ingestion. Phase 3.1 adds local semantic
+retrieval over the resulting chunks; RAG answer generation is not implemented.
 
 ```text
 Financial Research Agent
@@ -339,6 +339,45 @@ patterns vary across filings, so unresolved text is retained as `UNKNOWN` rather
 than dropped. Table cells are preserved as text but are not given advanced
 financial-table interpretation. Corpus validation checks IDs, metadata, source
 URLs, chunk references, contiguous indices, document types, and empty text.
+
+## Local SEC Semantic Retrieval
+Phase 3.1 builds a provider-neutral local semantic index over the Phase 3.0
+filing chunks. It uses a lazily loaded SentenceTransformer model (default
+`all-MiniLM-L6-v2`, configurable through `SEC_EMBEDDING_MODEL`), normalized
+vectors, and exact NumPy cosine similarity. It does not call an LLM, alter the
+stored filing text, or generate RAG answers.
+
+```text
+SEC ingestion -> structured chunks -> local embeddings -> exact semantic retrieval
+```
+
+The persistent index stores `vectors.npy` and inspectable `metadata.json`,
+including ordered chunk IDs, embedding-model identity, vector dimension, and a
+corpus fingerprint. Loading fails if the current corpus does not match that
+fingerprint. Filtering by ticker, filing form, section, and filing-date range
+happens before ranking, so filtered searches never leak other companies' chunks.
+
+```python
+from documents.storage import CorpusStorage
+from retrieval.embeddings import SentenceTransformerEmbeddingModel
+from retrieval.index import build_index, load_index
+from retrieval.retriever import SemanticRetriever
+
+chunks = CorpusStorage().load_chunks()
+model = SentenceTransformerEmbeddingModel()
+build_index(chunks, model, "data/financial_documents/semantic_index")
+index = load_index(chunks, "data/financial_documents/semantic_index", model)
+results = SemanticRetriever(index, chunks, model).search(
+    "What risks does the company disclose about Bitcoin?", ticker="MSTR"
+)
+```
+
+`python -m retrieval.benchmark` evaluates 12 manually specified query cases
+across NVDA, AAPL, and MSTR. Its Hit@K, Recall@K, and MRR reflect manually
+reviewed ticker/form/section expectations rather than exhaustive relevance or
+answer-quality judgments. The baseline has no BM25, reranking, vector database,
+query rewriting, agent integration, or RAG synthesis. The SEC corpus remains
+NVDA/AAPL/MSTR, while the existing LSTM remains BTC-USD only.
 
 # Results
 ![Alt Text](src/plots/cumulative_comparison.png)
