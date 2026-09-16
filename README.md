@@ -254,5 +254,51 @@ execute requests through `ToolRegistry`, and emit the same trace event contract.
 This keeps future provider additions below the application and deterministic
 financial layers.
 
+## Cross-Provider Benchmark
+`evaluation.provider_benchmark` runs the same eight financial-agent cases once
+for a configured provider, saves final answers and provider-neutral traces, and
+passes successful results to the deterministic evaluator. Artifacts are written
+under the ignored `evaluation_results/` directory and include provider, model,
+benchmark version, UTC timestamp, case IDs, default maximum tool rounds,
+aggregate metrics, per-case records, and recorded failures. They never include
+environment values or credentials.
+
+```bash
+PYTHONPATH=src python -m evaluation.provider_benchmark --provider gemini
+PYTHONPATH=src python -m evaluation.provider_benchmark --provider openai --model gpt-5.6-luna
+```
+
+The runner measures required-tool recall, missing/forbidden/extra/unnecessary
+calls, exact duplicate calls, tool-call and round counts, and structured
+limitation preservation. It does not measure prose quality, unrestricted factual
+knowledge, semantic redundancy of allowed extra calls, investment quality, or
+provider intelligence. Live model outputs can vary across runs despite identical
+case prompts and system instructions.
+
+The first one-run comparison used `gemini-3.6-flash` and `gpt-5.6-luna`:
+
+| Metric | Gemini | OpenAI |
+| --- | ---: | ---: |
+| Attempted cases | 8 | 8 |
+| Completed cases | 6 | 8 |
+| Required-tool recall (completed cases) | 1.000 | 0.875 |
+| Missing required tools | 0 | 1 |
+| Forbidden calls | 0 | 0 |
+| Extra calls | 1 | 0 |
+| Unnecessary calls | 1 | 0 |
+| Duplicate calls | 0 | 0 |
+| Tool calls / rounds | 5 / 5 | 3 / 3 |
+| Limitations preserved | 1 / 1 | 0 / 1 |
+
+Gemini completed the full BTC analysis with `analyze_market`; OpenAI did the
+same in this run. Gemini additionally called `analyze_market` for the direct
+ETH-LSTM request, which was measured as extra and unnecessary. For the
+unsupported-symbol analysis, Gemini called `analyze_market` and preserved its
+structured limitation; OpenAI made no tool call, producing the one missing
+required-tool and limitation-preservation failure. Gemini's Apple P/E and
+recommendation cases were recorded as free-tier rate-limit failures, not treated
+as successful no-tool responses. These are observations from one run, not a
+provider ranking.
+
 # Results
 ![Alt Text](src/plots/cumulative_comparison.png)
