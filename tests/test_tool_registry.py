@@ -152,6 +152,8 @@ def test_document_tool_is_capability_gated_and_exposes_only_json_parameters():
     schema = json.dumps(definition.as_dict()).lower()
     assert "retriever" not in schema and "sentence" not in schema and "vector" not in schema
     assert "openai" not in schema and "gemini" not in schema
+    assert "not a financial reporting period" in definition.parameters_schema["properties"]["filing_date_from"]["description"]
+    assert "filing dates" in definition.description.lower()
 
 
 def test_document_search_forwards_filters_preserves_provenance_and_bounds_results():

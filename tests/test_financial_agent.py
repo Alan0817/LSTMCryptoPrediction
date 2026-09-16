@@ -47,6 +47,11 @@ def test_agent_delegates_prompt_registry_and_system_instructions():
     json.dumps(result.to_dict())
 
 
+def test_system_prompt_clarifies_filing_date_and_web_search_planning():
+    assert "SEC filing dates, not financial reporting periods" in FINANCIAL_ANALYSIS_SYSTEM_PROMPT
+    assert "After two searches, normally synthesize" in FINANCIAL_ANALYSIS_SYSTEM_PROMPT
+
+
 def test_tools_used_are_unique_and_derived_from_actual_trace_events():
     llm_client = FakeLLMClient(
         events=[

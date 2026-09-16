@@ -8,6 +8,7 @@ import numpy as np
 from documents.types import FinancialDocumentChunk
 
 from .embeddings import EmbeddingModel
+from .filters import section_matches
 from .index import SemanticIndex
 from .types import RetrievalResult
 
@@ -64,7 +65,7 @@ class SemanticRetriever:
             index for index, chunk in enumerate(self._chunks)
             if (ticker is None or chunk.ticker == ticker.upper())
             and (document_type is None or chunk.document_type == document_type)
-            and (section is None or chunk.section == section)
+            and section_matches(chunk, section)
             and (filing_date_from is None or chunk.filing_date >= filing_date_from)
             and (filing_date_to is None or chunk.filing_date <= filing_date_to)
         ]

@@ -81,7 +81,10 @@ class ToolRegistry:
         if self._document_retriever is not None:
             self._tools["search_financial_documents"] = ToolDefinition(
                 name="search_financial_documents",
-                description="Search configured local SEC filing chunks and return compact, cited documentary evidence.",
+                description=(
+                    "Search configured local SEC filing chunks and return compact, cited documentary evidence. "
+                    "Filing-date filters apply to SEC filing dates, not financial reporting periods."
+                ),
                 parameters_schema=FINANCIAL_DOCUMENT_SEARCH_PARAMETERS,
                 handler=self._execute_financial_documents,
             )

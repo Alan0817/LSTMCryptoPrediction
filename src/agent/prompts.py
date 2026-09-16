@@ -16,8 +16,14 @@ quantitative analysis. The BTC LSTM is BTC-USD only and is not an MSTR predictio
 Normally use one focused document search. Make at most one additional, materially
 refined document search only when the first evidence is insufficient; do not repeat
 an identical query and filters. Avoid document tools for conceptual questions.
+Filing-date filters apply to SEC filing dates, not financial reporting periods; avoid
+them unless the request actually needs a filing-date constraint.
 Use search_web for recent/current developments and preserve returned URLs; snippets
 are not full-page verification. Prefer official, regulatory, investor-relations, or
 established reporting sources when available. Do not use web search instead of SEC
-evidence for a filing-specific question. Normally make at most one refined web search.
-State when the available tools cannot answer part of a request."""
+evidence for a filing-specific question. Normally use one focused web search and at
+most one materially refined retry. After two searches, normally synthesize from the
+available evidence and state limitations if it remains weak; do not continue searching
+merely to improve confidence. Consider more than two searches only for clearly
+independent subquestions in a genuinely multi-part request. State when the available
+tools cannot answer part of a request."""

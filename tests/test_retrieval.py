@@ -30,7 +30,15 @@ class FakeEmbeddings(EmbeddingModel):
         return np.asarray(self.query_vector, dtype=float)
 
 
-def make_chunk(chunk_id, text, ticker="MSTR", document_type="10-K", section="PART I ITEM 1A", filing_date="2026-02-19"):
+def make_chunk(
+    chunk_id,
+    text,
+    ticker="MSTR",
+    document_type="10-K",
+    section="PART I ITEM 1A",
+    section_title="Risk Factors",
+    filing_date="2026-02-19",
+):
     return FinancialDocumentChunk(
         chunk_id=chunk_id,
         document_id="doc_" + ticker,
@@ -44,7 +52,7 @@ def make_chunk(chunk_id, text, ticker="MSTR", document_type="10-K", section="PAR
         source="SEC EDGAR",
         source_url="https://www.sec.gov/example/" + chunk_id,
         section=section,
-        section_title="Risk Factors",
+        section_title=section_title,
         chunk_index=int(chunk_id[-1]) if chunk_id[-1].isdigit() else 0,
         text=text,
     )
@@ -130,6 +138,49 @@ def test_search_ranking_filters_ties_and_json_provenance(tmp_path):
     assert retriever.search("risk", ticker="NVDA") == []
     assert [item.chunk_id for item in retriever.search("risk", section="PART II ITEM 7")] == ["chunk_b"]
     assert [item.chunk_id for item in retriever.search("risk", filing_date_from="2026-01-01", filing_date_to="2026-12-31")] == ["chunk_a", "chunk_b", "chunk_c"]
+
+
+def test_section_filters_match_canonical_values_and_titles_case_insensitively(tmp_path):
+    chunks = [
+        make_chunk("chunk_risk", "custody risk", section="PART I ITEM 1A"),
+        make_chunk(
+            "chunk_business",
+            "business risk",
+            section="PART I ITEM 1",
+            section_title="Business",
+        ),
+    ]
+    vectors = {"custody risk": (1, 0), "business risk": (0, 1)}
+    _, model, index = make_index(tmp_path, chunks, vectors)
+    retriever = SemanticRetriever(index, chunks, model)
+
+    canonical = retriever.search("risk", section="PART I ITEM 1A")
+    title = retriever.search("risk", section="Risk Factors")
+    insensitive_title = retriever.search("risk", section="risk factors")
+
+    assert [item.chunk_id for item in canonical] == ["chunk_risk"]
+    assert [item.chunk_id for item in title] == ["chunk_risk"]
+    assert [item.chunk_id for item in insensitive_title] == ["chunk_risk"]
+    assert retriever.search("risk", section="Unrelated Section") == []
+
+
+def test_filing_date_filters_continue_to_use_sec_filing_dates(tmp_path):
+    chunks = [
+        make_chunk("chunk_filed_2026", "risk", filing_date="2026-02-19"),
+    ]
+    _, model, index = make_index(tmp_path, chunks, {"risk": (1, 0)})
+    retriever = SemanticRetriever(index, chunks, model)
+
+    assert retriever.search("risk", filing_date_to="2025-12-31") == []
+    assert [item.chunk_id for item in retriever.search("risk", filing_date_from="2026-01-01")] == [
+        "chunk_filed_2026"
+    ]
+
+
+def test_section_matching_contract_is_ticker_neutral():
+    source = (Path(__file__).resolve().parents[1] / "src" / "retrieval" / "filters.py").read_text()
+
+    assert "MSTR" not in source
 
 
 @pytest.mark.parametrize("kwargs", [
