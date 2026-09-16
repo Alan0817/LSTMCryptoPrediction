@@ -8,3 +8,5 @@ matplotlib
 openai
 python-dotenv
 google-genai
+requests
+beautifulsoup4

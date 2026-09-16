@@ -300,5 +300,45 @@ recommendation cases were recorded as free-tier rate-limit failures, not treated
 as successful no-tool responses. These are observations from one run, not a
 provider ranking.
 
+## SEC Financial-Document Corpus
+Phase 3.0 adds deterministic SEC EDGAR ingestion only; embeddings, retrieval,
+and RAG generation are not implemented yet.
+
+```text
+Financial Research Agent
+          |
+    future RAG tool
+          |
+   retrieval layer
+          |
+   chunked corpus
+          |
+    SEC ingestion
+          |
+      SEC EDGAR
+```
+
+The initial controlled corpus configuration contains `NVDA`, `AAPL`, and
+`MSTR`, with official `10-K` and `10-Q` primary HTML filings. NVDA offers an
+AI/semiconductor research case, AAPL a large diversified technology-company
+case, and MSTR a bridge between corporate research and Bitcoin exposure. These
+are configuration entries, not parsing branches: additional SEC-reporting
+companies can be added through `CompanyIdentity` data. The existing LSTM remains
+`BTC-USD` only and is unrelated to SEC-document applicability.
+
+`SECClient` discovers filings from SEC submissions metadata using CIK as the
+stable identifier, requires an identifiable `SEC_USER_AGENT`, and downloads
+official primary filing HTML. The pipeline removes non-content markup, preserves
+paragraphs and basic pipe-delimited table rows, detects Part/Item headings
+best-effort, chunks within sections, and writes duplicate-safe JSONL documents
+and chunks under ignored `data/financial_documents/`. Raw HTML is cached under
+ignored `data/sec_filings/raw/`.
+
+Section detection is intentionally heuristic: formatting and table-of-contents
+patterns vary across filings, so unresolved text is retained as `UNKNOWN` rather
+than dropped. Table cells are preserved as text but are not given advanced
+financial-table interpretation. Corpus validation checks IDs, metadata, source
+URLs, chunk references, contiguous indices, document types, and empty text.
+
 # Results
 ![Alt Text](src/plots/cumulative_comparison.png)

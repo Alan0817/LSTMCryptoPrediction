@@ -8,3 +8,5 @@
 __pycache__/
 *.pyc
 /evaluation_results/
+/data/sec_filings/
+/data/financial_documents/
