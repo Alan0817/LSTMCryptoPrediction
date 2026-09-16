@@ -379,5 +379,33 @@ answer-quality judgments. The baseline has no BM25, reranking, vector database,
 query rewriting, agent integration, or RAG synthesis. The SEC corpus remains
 NVDA/AAPL/MSTR, while the existing LSTM remains BTC-USD only.
 
+## SEC Evidence Tool
+`search_financial_documents` exposes the local semantic retriever through the
+provider-neutral `ToolRegistry`. The registry receives a prebuilt retriever as a
+controlled dependency; it does not load a model or index on each call. When no
+retriever is configured, the tool is deliberately not registered, so an LLM never
+advertises unavailable SEC-search capability.
+
+```text
+User
+  |
+FinancialAnalysisAgent
+  |
+ToolRegistry
+  +-- quantitative tools
+  +-- search_financial_documents -> SemanticRetriever -> SEC corpus
+```
+
+Document searches accept a bounded query (`top_k` 1-10) plus optional ticker,
+form, section, and filing-date filters. Results preserve chunk text and official
+SEC provenance for grounded synthesis; `no_results` is explicit and is not a
+claim that a fact is false. Retrieval is local and provider-neutral, not web or
+current-news search. The configured corpus currently covers NVDA, AAPL, and MSTR.
+
+The agent keeps quantitative evidence distinct from filing evidence and instructs
+providers to cite returned filing metadata, for example `[MSTR 10-K, Risk
+Factors, filed 2026-02-19]`. The BTC LSTM remains BTC-USD only: it is not an MSTR
+prediction and document retrieval does not change that boundary.
+
 # Results
 ![Alt Text](src/plots/cumulative_comparison.png)

@@ -1,10 +1,12 @@
 import json
+from pathlib import Path
 
 import numpy as np
 import pandas as pd
 import pytest
 
 from tools.registry import ToolRegistry
+from tools.financial_documents import search_financial_documents
 
 
 def make_ohlcv(rows=4):
@@ -113,3 +115,84 @@ def test_dataframe_tools_are_not_registered():
 
     assert "get_technical_indicators" not in names
     assert "get_lstm_prediction" not in names
+
+
+class FakeDocumentResult:
+    def to_dict(self):
+        return {
+            "rank": 1, "score": 0.65, "chunk_id": "chunk_sec", "document_id": "sec_doc",
+            "ticker": "MSTR", "company": "Strategy Inc.", "document_type": "10-K",
+            "filing_date": "2026-02-19", "period_end": "2025-12-31", "section": "PART I ITEM 1A",
+            "section_title": "Risk Factors", "text": "Bitcoin custody risk evidence.",
+            "source": "SEC EDGAR", "source_url": "https://www.sec.gov/example",
+        }
+
+
+class FakeDocumentRetriever:
+    def __init__(self, results=None, error=None):
+        self.results = [] if results is None else results
+        self.error = error
+        self.calls = []
+
+    def search(self, query, **kwargs):
+        self.calls.append({"query": query, **kwargs})
+        if self.error:
+            raise self.error
+        return self.results
+
+
+def test_document_tool_is_capability_gated_and_exposes_only_json_parameters():
+    assert "search_financial_documents" not in {tool.name for tool in ToolRegistry().list_tools()}
+    registry = ToolRegistry(document_retriever=FakeDocumentRetriever())
+    definition = registry.get("search_financial_documents")
+
+    assert set(definition.parameters_schema["properties"]) == {
+        "query", "top_k", "ticker", "document_type", "section", "filing_date_from", "filing_date_to"
+    }
+    schema = json.dumps(definition.as_dict()).lower()
+    assert "retriever" not in schema and "sentence" not in schema and "vector" not in schema
+    assert "openai" not in schema and "gemini" not in schema
+
+
+def test_document_search_forwards_filters_preserves_provenance_and_bounds_results():
+    retriever = FakeDocumentRetriever([FakeDocumentResult()])
+    result = ToolRegistry(document_retriever=retriever).execute(
+        "search_financial_documents",
+        {
+            "query": "What custody risks exist?", "top_k": 1, "ticker": "MSTR", "document_type": "10-K",
+            "section": "PART I ITEM 1A", "filing_date_from": "2026-01-01", "filing_date_to": "2026-12-31",
+        },
+    )
+
+    assert retriever.calls == [{
+        "query": "What custody risks exist?", "top_k": 1, "ticker": "MSTR", "document_type": "10-K",
+        "section": "PART I ITEM 1A", "filing_date_from": "2026-01-01", "filing_date_to": "2026-12-31",
+    }]
+    assert result["status"] == "ok" and result["result_count"] == 1
+    assert result["results"][0]["source_url"] == "https://www.sec.gov/example"
+    json.dumps(result)
+
+
+@pytest.mark.parametrize("arguments", [
+    {"query": "risk", "top_k": 0}, {"query": "risk", "top_k": 11}, {"query": "risk", "top_k": "5"},
+    {"query": "risk", "retriever": "untrusted"},
+])
+def test_document_search_schema_rejects_invalid_or_internal_arguments(arguments):
+    with pytest.raises((TypeError, ValueError)):
+        ToolRegistry(document_retriever=FakeDocumentRetriever()).execute("search_financial_documents", arguments)
+
+
+def test_document_search_no_results_unavailable_and_errors_are_structured():
+    empty = search_financial_documents("No match", retriever=FakeDocumentRetriever())
+    unavailable = search_financial_documents("No match")
+    failed = search_financial_documents("No match", retriever=FakeDocumentRetriever(error=RuntimeError("disk path leaked")))
+
+    assert empty["status"] == "no_results" and empty["results"] == []
+    assert unavailable["status"] == "unavailable"
+    assert failed["status"] == "retrieval_error"
+    assert "disk path" not in json.dumps(failed)
+
+
+def test_document_tool_does_not_construct_embedding_models():
+    source = (Path(__file__).resolve().parents[1] / "src" / "tools" / "financial_documents.py").read_text()
+    assert "SentenceTransformer" not in source

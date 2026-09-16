@@ -98,6 +98,25 @@ def test_structured_limitations_are_measured_for_unsupported_symbol_case():
     assert evaluation.limitation_preservation is True
 
 
+def test_documentary_cases_measure_document_and_quantitative_coverage_and_no_result_limits():
+    filing_only = evaluate_case(case("mstr_custody_filings"), result(trace=[request("search_financial_documents")]))
+    combined = evaluate_case(
+        case("mstr_combined_market_and_filings"),
+        result(trace=[request("analyze_market"), request("search_financial_documents", round_number=2)]),
+    )
+    no_result = evaluate_case(
+        case("unsupported_corpus_ticker"),
+        result(
+            trace=[request("search_financial_documents")],
+            limitations=[{"code": "document_retrieval_no_results"}],
+        ),
+    )
+
+    assert filing_only.required_tool_recall == 1.0
+    assert combined.required_tool_recall == 1.0 and combined.tool_round_count == 2
+    assert no_result.limitation_preservation is True
+
+
 def test_summary_aggregates_and_is_json_safe():
     summary = evaluate_results(
         [

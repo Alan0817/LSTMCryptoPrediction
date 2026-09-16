@@ -126,3 +126,5 @@ def test_agent_has_no_direct_financial_implementation_imports():
     assert "get_technical_indicators" not in source
     assert "get_lstm_prediction" not in source
     assert "get_risk_metrics" not in source
+    assert "SemanticRetriever" not in source
+    assert "documents.storage" not in source

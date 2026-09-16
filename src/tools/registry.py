@@ -7,8 +7,9 @@ from typing import Callable
 
 from .market_data import get_market_data
 from .market_analysis import analyze_market
+from .financial_documents import search_financial_documents
 from .risk_metrics import get_risk_metrics
-from .schemas import MARKET_ANALYSIS_PARAMETERS, MARKET_DATA_PARAMETERS, RISK_METRICS_PARAMETERS
+from .schemas import FINANCIAL_DOCUMENT_SEARCH_PARAMETERS, MARKET_ANALYSIS_PARAMETERS, MARKET_DATA_PARAMETERS, RISK_METRICS_PARAMETERS
 
 
 @dataclass(frozen=True)
@@ -42,10 +43,12 @@ class ToolRegistry:
         market_data_downloader=None,
         market_analysis_predictor=None,
         market_analysis_artifact_path=None,
+        document_retriever=None,
     ):
         self._market_data_downloader = market_data_downloader
         self._market_analysis_predictor = market_analysis_predictor
         self._market_analysis_artifact_path = market_analysis_artifact_path
+        self._document_retriever = document_retriever
         self._tools = {
             "get_market_data": ToolDefinition(
                 name="get_market_data",
@@ -66,6 +69,13 @@ class ToolRegistry:
                 handler=self._execute_market_analysis,
             ),
         }
+        if self._document_retriever is not None:
+            self._tools["search_financial_documents"] = ToolDefinition(
+                name="search_financial_documents",
+                description="Search configured local SEC filing chunks and return compact, cited documentary evidence.",
+                parameters_schema=FINANCIAL_DOCUMENT_SEARCH_PARAMETERS,
+                handler=self._execute_financial_documents,
+            )
 
     def list_tools(self) -> list[ToolDefinition]:
         """Return the explicitly exposed provider-neutral tool definitions."""
@@ -104,6 +114,9 @@ class ToolRegistry:
             dependencies["artifact_path"] = self._market_analysis_artifact_path
         return analyze_market(**arguments, **dependencies)
 
+    def _execute_financial_documents(self, **arguments) -> dict:
+        return search_financial_documents(**arguments, retriever=self._document_retriever)
+
 
 def _validate_arguments(schema: dict, arguments: dict) -> None:
     if not isinstance(arguments, dict):
@@ -137,6 +150,13 @@ def _validate_value(value, schema: dict, path: str) -> None:
             raise TypeError("Tool argument {!r} must be a number.".format(path))
         if not math.isfinite(value):
             raise ValueError("Tool argument {!r} must be finite.".format(path))
+        return
+
+    if value_type == "integer":
+        if isinstance(value, bool) or not isinstance(value, int):
+            raise TypeError("Tool argument {!r} must be an integer.".format(path))
+        if value < schema.get("minimum", -math.inf) or value > schema.get("maximum", math.inf):
+            raise ValueError("Tool argument {!r} is outside the allowed range.".format(path))
         return
 
     if value_type == "array":
