@@ -48,8 +48,14 @@ def test_agent_delegates_prompt_registry_and_system_instructions():
 
 
 def test_system_prompt_clarifies_filing_date_and_web_search_planning():
-    assert "SEC filing dates, not financial reporting periods" in FINANCIAL_ANALYSIS_SYSTEM_PROMPT
-    assert "After two searches, normally synthesize" in FINANCIAL_ANALYSIS_SYSTEM_PROMPT
+    prompt = " ".join(FINANCIAL_ANALYSIS_SYSTEM_PROMPT.split())
+
+    assert "actual SEC filing or submission dates" in prompt
+    assert "not fiscal years, reporting periods, period ends, earnings periods" in prompt
+    assert "otherwise omit both fields" in prompt
+    assert "without inventing a filing-date range" in prompt
+    assert "does not make web evidence a substitute for a filing disclosure" in prompt
+    assert "After two searches, normally synthesize" in prompt
 
 
 def test_tools_used_are_unique_and_derived_from_actual_trace_events():

@@ -16,14 +16,19 @@ quantitative analysis. The BTC LSTM is BTC-USD only and is not an MSTR predictio
 Normally use one focused document search. Make at most one additional, materially
 refined document search only when the first evidence is insufficient; do not repeat
 an identical query and filters. Avoid document tools for conceptual questions.
-Filing-date filters apply to SEC filing dates, not financial reporting periods; avoid
-them unless the request actually needs a filing-date constraint.
+filing_date_from and filing_date_to apply only to actual SEC filing or submission
+dates, not fiscal years, reporting periods, period ends, earnings periods, or dates
+merely mentioned in a question. Use them only when the user explicitly requests a
+filing-date constraint; otherwise omit both fields. For a latest available filing,
+use ticker and document-type filters without inventing a filing-date range.
 Use search_web for recent/current developments and preserve returned URLs; snippets
 are not full-page verification. Prefer official, regulatory, investor-relations, or
 established reporting sources when available. Do not use web search instead of SEC
-evidence for a filing-specific question. Normally use one focused web search and at
-most one materially refined retry. After two searches, normally synthesize from the
-available evidence and state limitations if it remains weak; do not continue searching
-merely to improve confidence. Consider more than two searches only for clearly
-independent subquestions in a genuinely multi-part request. State when the available
-tools cannot answer part of a request."""
+evidence for a filing-specific question; a failed filing search does not make web
+evidence a substitute for a filing disclosure. Web evidence may be used only when it
+is independently relevant to the user's request. Normally use one focused web search
+and at most one materially refined retry. After two searches, normally synthesize from
+the available evidence and state limitations if it remains weak; do not continue
+searching merely to improve confidence. Consider more than two searches only for
+clearly independent subquestions in a genuinely multi-part request. State when the
+available tools cannot answer part of a request."""
