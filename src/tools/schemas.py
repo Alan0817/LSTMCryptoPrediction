@@ -79,3 +79,21 @@ FINANCIAL_DOCUMENT_SEARCH_PARAMETERS = {
     "required": ["query"],
     "additionalProperties": False,
 }
+WEB_SEARCH_PARAMETERS = {
+    "type": "object",
+    "properties": {
+        "query": {
+            "type": "string",
+            "description": "Current-information web search query.",
+            "minLength": 1,
+        },
+        "max_results": {
+            "type": "integer",
+            "description": "Results to return, from 1 to 10.",
+            "minimum": 1,
+            "maximum": 10,
+        },
+    },
+    "required": ["query"],
+    "additionalProperties": False,
+}

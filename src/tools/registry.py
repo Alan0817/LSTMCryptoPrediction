@@ -9,7 +9,14 @@ from .market_data import get_market_data
 from .market_analysis import analyze_market
 from .financial_documents import search_financial_documents
 from .risk_metrics import get_risk_metrics
-from .schemas import FINANCIAL_DOCUMENT_SEARCH_PARAMETERS, MARKET_ANALYSIS_PARAMETERS, MARKET_DATA_PARAMETERS, RISK_METRICS_PARAMETERS
+from .schemas import (
+    FINANCIAL_DOCUMENT_SEARCH_PARAMETERS,
+    MARKET_ANALYSIS_PARAMETERS,
+    MARKET_DATA_PARAMETERS,
+    RISK_METRICS_PARAMETERS,
+    WEB_SEARCH_PARAMETERS,
+)
+from web_search import search_web
 
 
 @dataclass(frozen=True)
@@ -44,11 +51,13 @@ class ToolRegistry:
         market_analysis_predictor=None,
         market_analysis_artifact_path=None,
         document_retriever=None,
+        web_search_provider=None,
     ):
         self._market_data_downloader = market_data_downloader
         self._market_analysis_predictor = market_analysis_predictor
         self._market_analysis_artifact_path = market_analysis_artifact_path
         self._document_retriever = document_retriever
+        self._web_search_provider = web_search_provider
         self._tools = {
             "get_market_data": ToolDefinition(
                 name="get_market_data",
@@ -75,6 +84,13 @@ class ToolRegistry:
                 description="Search configured local SEC filing chunks and return compact, cited documentary evidence.",
                 parameters_schema=FINANCIAL_DOCUMENT_SEARCH_PARAMETERS,
                 handler=self._execute_financial_documents,
+            )
+        if self._web_search_provider is not None:
+            self._tools["search_web"] = ToolDefinition(
+                name="search_web",
+                description="Search current public web information and return compact source provenance.",
+                parameters_schema=WEB_SEARCH_PARAMETERS,
+                handler=self._execute_web_search,
             )
 
     def list_tools(self) -> list[ToolDefinition]:
@@ -116,6 +132,9 @@ class ToolRegistry:
 
     def _execute_financial_documents(self, **arguments) -> dict:
         return search_financial_documents(**arguments, retriever=self._document_retriever)
+
+    def _execute_web_search(self, **arguments):
+        return search_web(**arguments, provider=self._web_search_provider)
 
 
 def _validate_arguments(schema: dict, arguments: dict) -> None:

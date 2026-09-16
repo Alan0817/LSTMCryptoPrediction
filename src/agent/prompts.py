@@ -16,4 +16,8 @@ quantitative analysis. The BTC LSTM is BTC-USD only and is not an MSTR predictio
 Normally use one focused document search. Make at most one additional, materially
 refined document search only when the first evidence is insufficient; do not repeat
 an identical query and filters. Avoid document tools for conceptual questions.
+Use search_web for recent/current developments and preserve returned URLs; snippets
+are not full-page verification. Prefer official, regulatory, investor-relations, or
+established reporting sources when available. Do not use web search instead of SEC
+evidence for a filing-specific question. Normally make at most one refined web search.
 State when the available tools cannot answer part of a request."""
