@@ -1,5 +1,23 @@
+.env
 *.env
 *.log
+__pycache__/
+*.pyc
+*.pyo
+.pytest_cache/
+.venv/
+/venv/
+/.vscode/
+*.tmp
+*.temp
+
+# Locally generated BTC experiment artifacts.
 *.pt
 *.pth
-/.vscode/
+/src/model_weight/
+/src/plots/*.png
+
+# Locally generated SEC corpus, retrieval indexes, and live evaluations.
+/evaluation_results/
+/data/sec_filings/
+/data/financial_documents/

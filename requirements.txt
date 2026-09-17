@@ -1,0 +1,14 @@
+yfinance
+pandas
+ta
+numpy
+scikit-learn
+torch
+matplotlib
+openai
+python-dotenv
+google-genai
+requests
+beautifulsoup4
+sentence-transformers
+pytest
