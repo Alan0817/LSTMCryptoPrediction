@@ -238,17 +238,26 @@ The current `.env.example` defines the supported configuration surface:
 ```ini
 LLM_PROVIDER=gemini
 LLM_MODEL=
+# Optional provider-specific fallbacks when LLM_MODEL is unset.
+OPENAI_MODEL=
+GEMINI_MODEL=
 OPENAI_API_KEY=
 GEMINI_API_KEY=
 RETRIEVAL_BACKEND=hybrid
+# Optional local retrieval model overrides.
+SEC_EMBEDDING_MODEL=
+SEC_RERANKER_MODEL=
+# Documented adapter choice; application composition injects the provider.
 WEB_SEARCH_PROVIDER=tavily
 TAVILY_API_KEY=
 SEC_USER_AGENT="FinancialResearchAgent your-email@example.com"
 ```
 
 - `LLM_PROVIDER` selects `openai` or `gemini`; `LLM_MODEL` can override the provider default.
+- `OPENAI_MODEL` and `GEMINI_MODEL` are optional provider-specific fallbacks when `LLM_MODEL` is unset.
 - `OPENAI_API_KEY` and `GEMINI_API_KEY` are required only for the corresponding live provider.
 - `RETRIEVAL_BACKEND` accepts `dense`, `bm25`, `hybrid`, or `hybrid_reranked`. The default is `hybrid`.
+- `SEC_EMBEDDING_MODEL` and `SEC_RERANKER_MODEL` are optional local model overrides; leave them unset to use the project defaults.
 - `WEB_SEARCH_PROVIDER=tavily` documents the selected adapter in the local template. Current application composition receives an explicitly constructed `TavilyWebSearchProvider`, which needs `TAVILY_API_KEY`; it does not dynamically construct providers from this variable. Without a configured provider, `search_web` is not advertised by the registry.
 - `SEC_USER_AGENT` is required for live SEC EDGAR access and should identify the requester in accordance with SEC automated-access expectations.
 
@@ -275,11 +284,14 @@ PY
 
 To work without current web search, omit `web_search_provider`. The agent then exposes only capabilities that are actually configured. Both forms may make live provider calls; they are not part of the test suite.
 
-Historical BTC pipeline entry points remain available:
+Historical BTC pipeline entry points remain available. The repository includes the processed BTC dataset; training writes the ignored local model artifact required by the backtest. Refreshing market data is optional and makes a Yahoo Finance network request.
 
 ```bash
+# Optional: refresh the tracked-input format with live Yahoo Finance data.
 PYTHONPATH=src python src/data_downloader.py
+# Required before a fresh-clone backtest: writes src/model_weight/lstm_model.pth.
 PYTHONPATH=src python src/train.py
+# Requires the model artifact produced by training.
 PYTHONPATH=src python src/backtest.py
 ```
 
